@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import pandas as pd
 import google.generativeai as genai
@@ -7,20 +7,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Set static folder to current directory to find index.html
-app = Flask(__name__, static_folder='.', static_url_path='')
+app = Flask(__name__)
 CORS(app)
 
-# Configure Gemini AI
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel('gemini-pro')
 
 current_df = None
 
-# Main Route to fix 404 error
+# Using send_file instead of send_from_directory for better reliability
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return send_file('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -53,9 +51,9 @@ def chat():
 
     try:
         if current_df is not None:
-            prompt = f"Context (Data):\n{current_df.head(10).to_string()}\n\nQuestion: {user_query}"
+            prompt = f"Data Analysis Context:\n{current_df.head(10).to_string()}\n\nQuestion: {user_query}"
         else:
-            prompt = f"General Question: {user_query}"
+            prompt = f"General Inquiry: {user_query}"
 
         response = model.generate_content(prompt)
         return jsonify({"response": response.text})
