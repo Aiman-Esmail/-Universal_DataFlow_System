@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import pandas as pd
 import google.generativeai as genai
@@ -7,15 +7,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='.')
 CORS(app)
 
 # AI Configuration
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel('gemini-pro')
 
-# Global variable to store the dataframe
 current_df = None
+
+# --- هذه الإضافة هي التي ستحل مشكلة 404 ---
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
+# -----------------------------------------
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -48,26 +53,12 @@ def chat():
 
     try:
         if current_df is not None:
-            # Case 1: Data Analysis & Cleaning (When file exists)
-            prompt = f"""
-            You are a Data Expert. Analyze the following data snippet (first 10 rows):
-            {current_df.head(10).to_string()}
-            
-            User Question: {user_query}
-            
-            Task: If the user asks for data cleaning, error detection, or analysis, provide a detailed technical response. 
-            If they ask a general question, use the data context if relevant.
-            """
+            prompt = f"Data Analysis Context:\n{current_df.head(10).to_string()}\n\nUser Question: {user_query}"
         else:
-            # Case 2: General Chat (When NO file is uploaded)
-            prompt = f"""
-            The user is asking a general question: {user_query}
-            Please provide a helpful and professional response as a technical assistant.
-            """
+            prompt = f"General Question: {user_query}"
 
         response = model.generate_content(prompt)
         return jsonify({"response": response.text})
-    
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
