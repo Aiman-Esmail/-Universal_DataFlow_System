@@ -7,9 +7,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Set current directory as base
-base_dir = os.path.abspath(os.path.dirname(__file__))
-app = Flask(__name__, static_folder=base_dir)
+# Get the absolute path of the directory where app.py is located
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+app = Flask(__name__)
 CORS(app)
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -17,10 +18,10 @@ model = genai.GenerativeModel('gemini-pro')
 
 current_df = None
 
-# Serving index.html safely
+# Route to serve the index.html from the absolute path
 @app.route('/')
 def index():
-    return send_from_directory(base_dir, 'index.html')
+    return send_from_directory(basedir, 'index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -53,9 +54,9 @@ def chat():
 
     try:
         if current_df is not None:
-            prompt = f"Data Context:\n{current_df.head(10).to_string()}\n\nQuestion: {user_query}"
+            prompt = f"Analyze this data:\n{current_df.head(10).to_string()}\n\nQuestion: {user_query}"
         else:
-            prompt = f"General Question: {user_query}"
+            prompt = f"General Tech Question: {user_query}"
 
         response = model.generate_content(prompt)
         return jsonify({"response": response.text})
