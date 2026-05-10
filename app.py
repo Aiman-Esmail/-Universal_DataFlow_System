@@ -1,62 +1,75 @@
 import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import pandas as pd
-from flask import Flask, render_template, request, jsonify
 import google.generativeai as genai
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
+CORS(app)
 
-# Use your API Key
-API_KEY = "AIzaSyA_vKT-afxrfXW68FkNMoI1EosNVpMFGv0"
-genai.configure(api_key=API_KEY.strip())
+# AI Configuration
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+model = genai.GenerativeModel('gemini-pro')
 
-df = None
-
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Global variable to store the dataframe
+current_df = None
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    global df
-    file = request.files.get('file')
-    if file:
-        try:
-            df = pd.read_csv(file)
-            return jsonify({"message": "File ready!", "columns": list(df.columns)})
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+    global current_df
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    
+    file = request.files['file']
+    try:
+        if file.filename.endswith('.csv'):
+            current_df = pd.read_csv(file)
+        else:
+            current_df = pd.read_excel(file)
+        
+        return jsonify({
+            "message": "File uploaded successfully!",
+            "columns": list(current_df.columns),
+            "rows": len(current_df)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    global df
-    data = request.get_json()
-    user_input = data.get('message')
+    global current_df
+    user_query = request.json.get('query')
     
-    if df is None:
-        return jsonify({"response": "Please upload a CSV file first."})
+    if not user_query:
+        return jsonify({"error": "No query provided"}), 400
 
     try:
-        # Step 1: Automatically find the first working model in your account
-        working_model_name = None
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                working_model_name = m.name
-                break
-        
-        if not working_model_name:
-            return jsonify({"response": "No working models found in your API Key."})
+        if current_df is not None:
+            # Case 1: Data Analysis & Cleaning (When file exists)
+            prompt = f"""
+            You are a Data Expert. Analyze the following data snippet (first 10 rows):
+            {current_df.head(10).to_string()}
+            
+            User Question: {user_query}
+            
+            Task: If the user asks for data cleaning, error detection, or analysis, provide a detailed technical response. 
+            If they ask a general question, use the data context if relevant.
+            """
+        else:
+            # Case 2: General Chat (When NO file is uploaded)
+            prompt = f"""
+            The user is asking a general question: {user_query}
+            Please provide a helpful and professional response as a technical assistant.
+            """
 
-        # Step 2: Use the model we found
-        model = genai.GenerativeModel(working_model_name)
-        columns_info = ", ".join(list(df.columns))
-        prompt = f"Data columns: {columns_info}. Question: {user_input}"
-        
         response = model.generate_content(prompt)
         return jsonify({"response": response.text})
-            
+    
     except Exception as e:
-        print(f"DEBUG ERROR: {str(e)}") # This shows the real error in terminal
-        return jsonify({"response": f"Final System Error: {str(e)}"})
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
