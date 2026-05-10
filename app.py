@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import pandas as pd
 import google.generativeai as genai
@@ -7,7 +7,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+# Set current directory as base
+base_dir = os.path.abspath(os.path.dirname(__file__))
+app = Flask(__name__, static_folder=base_dir)
 CORS(app)
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -15,10 +17,10 @@ model = genai.GenerativeModel('gemini-pro')
 
 current_df = None
 
-# Using send_file instead of send_from_directory for better reliability
+# Serving index.html safely
 @app.route('/')
 def index():
-    return send_file('index.html')
+    return send_from_directory(base_dir, 'index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -51,9 +53,9 @@ def chat():
 
     try:
         if current_df is not None:
-            prompt = f"Data Analysis Context:\n{current_df.head(10).to_string()}\n\nQuestion: {user_query}"
+            prompt = f"Data Context:\n{current_df.head(10).to_string()}\n\nQuestion: {user_query}"
         else:
-            prompt = f"General Inquiry: {user_query}"
+            prompt = f"General Question: {user_query}"
 
         response = model.generate_content(prompt)
         return jsonify({"response": response.text})
