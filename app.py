@@ -7,17 +7,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configuration: Setting the static folder to current directory
+# Set static folder to current directory to find index.html
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
-# AI Setup
+# Configure Gemini AI
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel('gemini-pro')
 
 current_df = None
 
-# Route to serve the index.html file (Fixes 404 error)
+# Main Route to fix 404 error
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -53,11 +53,9 @@ def chat():
 
     try:
         if current_df is not None:
-            # Context for data analysis
-            prompt = f"Analyze this data snippet:\n{current_df.head(10).to_string()}\n\nUser Question: {user_query}"
+            prompt = f"Context (Data):\n{current_df.head(10).to_string()}\n\nQuestion: {user_query}"
         else:
-            # Context for general chat
-            prompt = f"User Question: {user_query}\nAnswer as a professional technical assistant."
+            prompt = f"General Question: {user_query}"
 
         response = model.generate_content(prompt)
         return jsonify({"response": response.text})
