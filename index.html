@@ -4,26 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Data Analyst</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="static/styles.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { color: #1a73e8; text-align: center; }
+        .upload-section { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 2px dashed #ddd; text-align: center; margin-bottom: 25px; }
+        .chat-box { height: 350px; border: 1px solid #e0e0e0; overflow-y: auto; padding: 15px; margin-bottom: 15px; background: #ffffff; border-radius: 8px; }
+        input[type="text"] { width: calc(100% - 110px); padding: 12px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 12px 20px; background-color: #1a73e8; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        button:hover { background-color: #1557b0; }
+        .user-msg { color: #1a73e8; margin-bottom: 10px; }
+        .ai-msg { color: #202124; background: #f1f3f4; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>AI Data Analyst Agent</h1>
         
         <div class="upload-section">
-            <h3>Upload Dataset (CSV)</h3>
-            <input type="file" id="fileInput" accept=".csv">
-            <button onclick="uploadFile()">Upload</button>
-            <p id="uploadStatus"></p>
+            <h3>Upload Dataset</h3>
+            <input type="file" id="fileInput" accept=".csv, .xlsx, .xls">
+            <button onclick="uploadFile()">Upload File</button>
+            <p id="uploadStatus" style="margin-top:10px; font-weight:bold;"></p>
         </div>
 
-        <hr>
-
         <div class="chat-section">
-            <h3>Predict & Analyze</h3>
             <div id="chatBox" class="chat-box"></div>
-            <input type="text" id="userInput" placeholder="Ask a question about your data...">
-            <button onclick="sendMessage()">Predict</button>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="userInput" placeholder="Ask something about your data...">
+                <button onclick="sendMessage()">Analyze</button>
+            </div>
         </div>
     </div>
 
@@ -31,51 +42,48 @@
         function uploadFile() {
             const fileInput = document.getElementById('fileInput');
             const status = document.getElementById('uploadStatus');
+            if (!fileInput.files[0]) return;
+
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
+            status.style.color = "blue";
+            status.innerText = "Processing...";
 
-            status.innerText = "Uploading...";
-
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
+            fetch('/upload', { method: 'POST', body: formData })
+            .then(res => res.json())
             .then(data => {
                 if (data.error) {
+                    status.style.color = "red";
                     status.innerText = "Error: " + data.error;
                 } else {
-                    status.innerText = "File uploaded successfully!";
+                    status.style.color = "green";
+                    status.innerText = "Success: File Loaded!";
                 }
             })
-            .catch(error => {
-                status.innerText = "Error: " + error;
-            });
+            .catch(err => { status.innerText = "Connection Error"; });
         }
 
         function sendMessage() {
             const input = document.getElementById('userInput');
             const chatBox = document.getElementById('chatBox');
-            const message = input.value;
+            const query = input.value;
+            if (!query) return;
 
-            if (!message) return;
-
-            chatBox.innerHTML += `<p><strong>You:</strong> ${message}</p>`;
+            chatBox.innerHTML += `<div class="user-msg"><strong>You:</strong> ${query}</div>`;
             input.value = '';
 
             fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: message })
+                body: JSON.stringify({ query: query })
             })
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
-                chatBox.innerHTML += `<p><strong>AI:</strong> ${data.response}</p>`;
+                const responseText = data.response || data.error;
+                chatBox.innerHTML += `<div class="ai-msg"><strong>AI:</strong> ${responseText}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             })
-            .catch(error => {
-                chatBox.innerHTML += `<p><strong>Error:</strong> Could not connect to server.</p>`;
-            });
+            .catch(err => { chatBox.innerHTML += `<div>Error connecting...</div>`; });
         }
     </script>
 </body>
