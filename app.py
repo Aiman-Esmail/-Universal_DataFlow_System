@@ -7,17 +7,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# إخبار فلاسك أن الملفات الثابتة (مثل index.html) موجودة في نفس المجلد
-app = Flask(__name__, static_folder='.')
+# Configuration: Setting the static folder to current directory
+app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
-# إعداد الذكاء الاصطناعي
+# AI Setup
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel('gemini-pro')
 
 current_df = None
 
-# الدالة السحرية التي تحل مشكلة 404 وتفتح الموقع
+# Route to serve the index.html file (Fixes 404 error)
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -53,9 +53,11 @@ def chat():
 
     try:
         if current_df is not None:
-            prompt = f"Data Context:\n{current_df.head(10).to_string()}\n\nUser Question: {user_query}"
+            # Context for data analysis
+            prompt = f"Analyze this data snippet:\n{current_df.head(10).to_string()}\n\nUser Question: {user_query}"
         else:
-            prompt = f"General Tech Question: {user_query}"
+            # Context for general chat
+            prompt = f"User Question: {user_query}\nAnswer as a professional technical assistant."
 
         response = model.generate_content(prompt)
         return jsonify({"response": response.text})
