@@ -1,100 +1,68 @@
-import os
 import pandas as pd
-import google.generativeai as genai
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from imblearn.over_sampling import SMOTE
+import google.generativeai as genai
+import os
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__)
 CORS(app)
 
-# --- Configuration: Gemini API ---
-api_key = os.getenv("GOOGLE_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
-model = genai.GenerativeModel(model_name='gemini-1.5-flash')
-
-# --- Autonomous Data Agent Logic ---
-def autonomous_data_cleaner(df):
-    actions_taken = []
-    target_col = df.columns[-1]
-    
-    # 1. Handle Class Imbalance
-    class_counts = df[target_col].value_counts(normalize=True)
-    if class_counts.min() < 0.40:
-        smote = SMOTE(random_state=42)
-        X = df.drop(columns=[target_col])
-        y = df[target_col]
-        X_res, y_res = smote.fit_resample(X, y)
-        df = pd.concat([pd.DataFrame(X_res, columns=X.columns), 
-                        pd.Series(y_res, name=target_col)], axis=1)
-        actions_taken.append("Fixed Class Imbalance using SMOTE.")
-
-    # 2. Handle Potential Overfitting
-    if len(df.columns) > (len(df) * 0.1):
-        correlations = df.corr()[target_col].abs().sort_values(ascending=False)
-        num_features = min(10, len(df.columns))
-        top_features = correlations.index[:num_features]
-        df = df[top_features]
-        actions_taken.append("Handled Overfitting by selecting top features.")
-
-    # 3. Handle Missing Values
-    if df.isnull().values.any():
-        for col in df.columns:
-            if df[col].isnull().any():
-                if df[col].dtype == 'object':
-                    df[col] = df[col].fillna(df[col].mode()[0])
-                else:
-                    df[col] = df[col].fillna(df[col].mean())
-        actions_taken.append("Automatically filled missing values.")
-
-    # 4. Handle Outliers
-    numeric_cols = df.select_dtypes(include=['number']).columns
-    for col in numeric_cols:
-        Q1 = df[col].quantile(0.25)
-        Q3 = df[col].quantile(0.75)
-        IQR = Q3 - Q1
-        df[col] = df[col].clip(Q1 - 1.5 * IQR, Q3 + 1.5 * IQR)
-    actions_taken.append("Handled outliers using IQR method.")
-    
-    return df, actions_taken
-
-# --- Routes ---
-@app.route('/')
-def index():
-    return send_from_directory('.', 'index.html')
+# Global variable to store the dataframe
+df = None
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    global df
     if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
+        return jsonify({"error": "No file part"}), 400
+    
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    
+        return jsonify({"error": "No selected file"}), 400
+
     try:
-        # Load and Clean Data
         df = pd.read_csv(file)
-        cleaned_df, actions = autonomous_data_cleaner(df)
-        
-        # Return summary of actions and first 5 rows of cleaned data
-        return jsonify({
-            'message': 'Data processed successfully!',
-            'actions': actions,
-            'preview': cleaned_df.head().to_dict(orient='records')
-        })
+        # Immediate basic cleaning
+        df.drop_duplicates(inplace=True)
+        return jsonify({"message": "Success: File Loaded!", "rows": len(df), "cols": len(df.columns)})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/chat', methods=['POST'])
-def chat():
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    global df
+    data = request.json
+    user_query = data.get('query', '')
+
+    if df is None:
+        return jsonify({"response": "Error: No data found. Please upload a file first."})
+
+    # Data Discovery Logic
+    null_counts = df.isnull().sum().sum()
+    column_names = ", ".join(df.columns.tolist())
+    
+    # Simple automated cleaning for the demo
+    df.fillna(method='ffill', inplace=True)
+
+    analysis_report = (
+        f"Data Insights: Identified {len(df)} rows and {len(df.columns)} columns. "
+        f"Columns found: {column_names}. "
+        f"Automatic cleaning: Fixed {null_counts} missing values using forward-fill."
+    )
+
+    # Integrating with Gemini for the "Smart Agent" feel
     try:
-        data = request.json
-        user_message = data.get('message') or data.get('prompt')
-        response = model.generate_content(user_message)
-        return jsonify({'response': response.text})
+        api_key = os.getenv("GEMINI_API_KEY")
+        if api_key:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-pro')
+            prompt = f"User Query: {user_query}. Context: {analysis_report}. Explain what was done to the data."
+            response = model.generate_content(prompt)
+            return jsonify({"response": response.text})
+        else:
+            return jsonify({"response": f"Agent Action: {analysis_report}"})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"response": f"Local Analysis: {analysis_report}"})
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=10000)
+if __name__ == '__main__':
+    app.run(debug=True)
