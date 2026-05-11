@@ -1,9 +1,10 @@
 import os
 import pandas as pd
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
+import google.generativeai as genai
 
-# This line tells Flask to look for HTML in the main folder, not templates
+# Important: template_folder='.' because index.html is in the root folder
 app = Flask(__name__, template_folder='.')
 CORS(app)
 
@@ -12,7 +13,6 @@ df = None
 @app.route('/')
 def home():
     try:
-        # Now it will find index.html in your main GitHub folder
         return render_template('index.html')
     except Exception as e:
         return f"Error: index.html not found. Details: {str(e)}", 500
@@ -25,21 +25,42 @@ def upload_file():
     file = request.files['file']
     try:
         df = pd.read_csv(file)
-        return jsonify({"message": "Success: File Loaded!", "rows": len(df), "cols": len(df.columns)})
+        # Auto-cleaning duplicates
+        df.drop_duplicates(inplace=True)
+        return jsonify({
+            "message": "Success: File Loaded!", 
+            "rows": len(df), 
+            "cols": len(df.columns)
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
     global df
+    data = request.json
+    query = data.get('query', '')
+    
     if df is None:
         return jsonify({"response": "Error: Upload data first."})
     
+    # Logic for Data Discovery
     null_count = df.isnull().sum().sum()
     df.fillna(method='ffill', inplace=True)
     
-    report = f"Analysis: Found {len(df)} rows. Agent handled {null_count} missing values."
-    return jsonify({"response": report})
+    context = f"Dataset: {len(df)} rows. Agent cleaned {null_count} missing values."
+    
+    try:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if api_key:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-pro')
+            prompt = f"Context: {context}. User: {query}. Brief technical summary:"
+            response = model.generate_content(prompt)
+            return jsonify({"response": response.text})
+        return jsonify({"response": f"Local Report: {context}"})
+    except:
+        return jsonify({"response": f"Automated Action: {context}"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
