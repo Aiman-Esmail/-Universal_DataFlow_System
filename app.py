@@ -7,14 +7,14 @@ from flask_cors import CORS
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
-# Securely load API Key
+# Configure API Key
 api_key = os.getenv("GOOGLE_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 else:
-    print("Warning: GOOGLE_API_KEY is not set")
+    print("GOOGLE_API_KEY is missing")
 
-# Use the correct stable model name
+# Correct stable model name
 model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 
 @app.route('/')
@@ -32,7 +32,7 @@ def chat():
         user_message = data.get('message', '')
         
         if not user_message:
-            return jsonify({'error': 'Empty message'}), 400
+            return jsonify({'error': 'No message provided'}), 400
 
         response = model.generate_content(user_message)
         return jsonify({'response': response.text})
