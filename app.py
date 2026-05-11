@@ -14,11 +14,11 @@ if api_key:
     genai.configure(api_key=api_key)
 model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 
-# --- STEP 1, 2 & 3: Autonomous Data Agent Logic ---
+# --- STEP 1, 2, 3 & 4: Autonomous Data Agent Logic ---
 def autonomous_data_cleaner(df):
     """
     This function automatically detects and fixes data issues.
-    Handles: Imbalance, Overfitting, and Missing Values.
+    Handles: Imbalance, Overfitting, Missing Values, and Outliers.
     """
     actions_taken = []
     
@@ -36,7 +36,7 @@ def autonomous_data_cleaner(df):
                         pd.Series(y_res, name=target_col)], axis=1)
         actions_taken.append("Fixed Class Imbalance using SMOTE.")
 
-    # 2. Handle Potential Overfitting
+    # 2. Handle Potential Overfitting (Feature Selection)
     if len(df.columns) > (len(df) * 0.1):
         correlations = df.corr()[target_col].abs().sort_values(ascending=False)
         num_features = min(10, len(df.columns))
@@ -49,12 +49,21 @@ def autonomous_data_cleaner(df):
         for col in df.columns:
             if df[col].isnull().any():
                 if df[col].dtype == 'object':
-                    # Fill text columns with the most frequent value (Mode)
                     df[col] = df[col].fillna(df[col].mode()[0])
                 else:
-                    # Fill numeric columns with the average (Mean)
                     df[col] = df[col].fillna(df[col].mean())
         actions_taken.append("Automatically filled missing values (Mean/Mode).")
+
+    # 4. Handle Outliers (Capping using IQR method)
+    numeric_cols = df.select_dtypes(include=['number']).columns
+    for col in numeric_cols:
+        Q1 = df[col].quantile(0.25)
+        Q3 = df[col].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+        df[col] = df[col].clip(lower_bound, upper_bound)
+    actions_taken.append("Handled outliers by capping extreme values using IQR.")
     
     return df, actions_taken
 
