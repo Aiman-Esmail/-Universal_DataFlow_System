@@ -14,15 +14,9 @@ if api_key:
     genai.configure(api_key=api_key)
 model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 
-# --- STEP 1, 2, 3 & 4: Autonomous Data Agent Logic ---
+# --- Autonomous Data Agent Logic ---
 def autonomous_data_cleaner(df):
-    """
-    This function automatically detects and fixes data issues.
-    Handles: Imbalance, Overfitting, Missing Values, and Outliers.
-    """
     actions_taken = []
-    
-    # Identify the target column (assumed to be the last one)
     target_col = df.columns[-1]
     
     # 1. Handle Class Imbalance
@@ -36,13 +30,13 @@ def autonomous_data_cleaner(df):
                         pd.Series(y_res, name=target_col)], axis=1)
         actions_taken.append("Fixed Class Imbalance using SMOTE.")
 
-    # 2. Handle Potential Overfitting (Feature Selection)
+    # 2. Handle Potential Overfitting
     if len(df.columns) > (len(df) * 0.1):
         correlations = df.corr()[target_col].abs().sort_values(ascending=False)
         num_features = min(10, len(df.columns))
         top_features = correlations.index[:num_features]
         df = df[top_features]
-        actions_taken.append("Handled Overfitting by selecting most relevant features.")
+        actions_taken.append("Handled Overfitting by selecting top features.")
 
     # 3. Handle Missing Values
     if df.isnull().values.any():
@@ -52,18 +46,16 @@ def autonomous_data_cleaner(df):
                     df[col] = df[col].fillna(df[col].mode()[0])
                 else:
                     df[col] = df[col].fillna(df[col].mean())
-        actions_taken.append("Automatically filled missing values (Mean/Mode).")
+        actions_taken.append("Automatically filled missing values.")
 
-    # 4. Handle Outliers (Capping using IQR method)
+    # 4. Handle Outliers
     numeric_cols = df.select_dtypes(include=['number']).columns
     for col in numeric_cols:
         Q1 = df[col].quantile(0.25)
         Q3 = df[col].quantile(0.75)
         IQR = Q3 - Q1
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-        df[col] = df[col].clip(lower_bound, upper_bound)
-    actions_taken.append("Handled outliers by capping extreme values using IQR.")
+        df[col] = df[col].clip(Q1 - 1.5 * IQR, Q3 + 1.5 * IQR)
+    actions_taken.append("Handled outliers using IQR method.")
     
     return df, actions_taken
 
@@ -72,26 +64,35 @@ def autonomous_data_cleaner(df):
 def index():
     return send_from_directory('.', 'index.html')
 
-@app.route('/static/<path:path>')
-def send_static(path):
-    return send_from_directory('static', path)
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    try:
+        # Load and Clean Data
+        df = pd.read_csv(file)
+        cleaned_df, actions = autonomous_data_cleaner(df)
+        
+        # Return summary of actions and first 5 rows of cleaned data
+        return jsonify({
+            'message': 'Data processed successfully!',
+            'actions': actions,
+            'preview': cleaned_df.head().to_dict(orient='records')
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
         data = request.json
-        user_message = data.get('message') or data.get('prompt') or data.get('text')
-        
-        if not user_message:
-            return jsonify({'error': 'No input detected.'}), 400
-
+        user_message = data.get('message') or data.get('prompt')
         response = model.generate_content(user_message)
-        
-        if response and response.text:
-            return jsonify({'response': response.text})
-        else:
-            return jsonify({'error': 'AI could not generate a response.'}), 500
-
+        return jsonify({'response': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
