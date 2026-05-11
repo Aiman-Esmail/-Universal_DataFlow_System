@@ -1,59 +1,43 @@
 import os
-import streamlit as st
 import pandas as pd
 import google.generativeai as genai
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 
-# Configure Google Gemini API
+app = Flask(__name__, static_folder='static')
+CORS(app)
+
+# Securely load API Key
 api_key = os.getenv("GOOGLE_API_KEY")
-
 if api_key:
     genai.configure(api_key=api_key)
 else:
-    st.error("API Key not found. Please check Environment Variables in Render.")
+    print("Warning: GOOGLE_API_KEY is not set")
 
-# Initialize the model with the correct name for version 1.5
-model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+# Use the correct stable model name
+model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 
-def main():
-    st.set_page_config(page_title="Universal DataFlow System", layout="wide")
-    
-    st.title("Universal DataFlow System")
-    st.subheader("Automated Data Cleaning & AI Analysis")
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
 
-    # File Upload Section
-    uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
+@app.route('/static/<path:path>')
+def send_static(path):
+    return send_from_directory('static', path)
 
-    if uploaded_file is not None:
-        try:
-            df = pd.read_csv(uploaded_file)
-            st.success("File Loaded Successfully!")
-            
-            # Display Data Preview
-            st.write("### Data Preview")
-            st.dataframe(df.head())
+@app.route('/chat', methods=['POST'])
+def chat():
+    try:
+        data = request.json
+        user_message = data.get('message', '')
+        
+        if not user_message:
+            return jsonify({'error': 'Empty message'}), 400
 
-            # Data Statistics
-            if st.checkbox("Show Data Summary"):
-                st.write(df.describe())
-
-            # AI Analysis Section
-            st.write("### AI Data Assistant")
-            user_question = st.text_input("Ask a question about your data:")
-
-            if user_question:
-                # Prepare a brief context for the AI
-                data_context = f"Dataset columns: {', '.join(df.columns.tolist())}. Data shape: {df.shape}."
-                prompt = f"Context: {data_context}\nQuestion: {user_question}"
-                
-                try:
-                    response = model.generate_content(prompt)
-                    st.write("### AI Response:")
-                    st.write(response.text)
-                except Exception as e:
-                    st.error(f"Error connecting to AI: {str(e)}")
-
-        except Exception as e:
-            st.error(f"Error loading file: {e}")
+        response = model.generate_content(user_message)
+        return jsonify({'response': response.text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
-    main()
+    app.run(host='0.0.0.0', port=10000)
