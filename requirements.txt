@@ -1,7 +1,6 @@
 flask
 flask-cors
 pandas
-google-generativeai
-imbalanced-learn
 scikit-learn
-gunicorn
+imbalanced-learn
+google-generativeai
