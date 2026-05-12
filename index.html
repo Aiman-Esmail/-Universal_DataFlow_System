@@ -6,70 +6,75 @@
     <title>AI Data Analyst Agent</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #2563eb;
-            --bg-color: #f8fafc;
-            --text-color: #1e293b;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 500px;
-            text-align: center;
-        }
-        h1 { color: var(--primary-color); margin-bottom: 1rem; }
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 550px; text-align: center; }
+        h1 { color: var(--primary); margin-bottom: 0.5rem; font-size: 1.8rem; }
         p { color: #64748b; margin-bottom: 2rem; }
-        .upload-section {
-            border: 2px dashed #cbd5e1;
-            padding: 2rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: border 0.3s;
-        }
-        .upload-section:hover { border-color: var(--primary-color); }
-        button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
-            font-weight: 600;
-            margin-top: 1.5rem;
-            cursor: pointer;
-            width: 100%;
-        }
-        button:hover { background-color: #1d4ed8; }
+        .upload-box { border: 2px dashed #cbd5e1; padding: 2rem; border-radius: 12px; position: relative; transition: 0.3s; }
+        .upload-box:hover { border-color: var(--primary); background: #eff6ff; }
+        input[type="file"] { width: 100%; cursor: pointer; }
+        button { background: var(--primary); color: white; border: none; padding: 1rem; border-radius: 8px; font-weight: 600; margin-top: 1.5rem; width: 100%; cursor: pointer; font-size: 1rem; transition: 0.3s; }
+        button:hover { background: #1d4ed8; transform: translateY(-2px); }
+        #result { margin-top: 2rem; padding: 1rem; border-radius: 8px; display: none; text-align: left; background: #f1f5f9; border-left: 4px solid var(--primary); }
+        .status-success { color: #059669; font-weight: bold; }
+        .loader { display: none; margin: 10px auto; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>AI Data Analyst</h1>
-        <p>Upload your CSV file and let the AI analyze your data instantly.</p>
-        
-        <form action="/upload" method="post" enctype="multipart/form-data">
-            <div class="upload-section">
-                <input type="file" name="file" id="fileInput" accept=".csv" required>
-            </div>
-            <button type="submit">Analyze Data</button>
-        </form>
+<div class="container">
+    <h1>AI Data Analyst</h1>
+    <p>Upload CSV to get instant insights</p>
+    
+    <form id="uploadForm">
+        <div class="upload-box">
+            <input type="file" name="file" id="fileInput" accept=".csv" required>
+        </div>
+        <button type="submit" id="submitBtn">Analyze Data</button>
+    </form>
 
-        <div id="result" style="margin-top: 2rem; text-align: left;">
-            </div>
-    </div>
+    <div class="loader" id="loader"></div>
+    <div id="result"></div>
+</div>
+
+<script>
+    document.getElementById('uploadForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const resultDiv = document.getElementById('result');
+        const loader = document.getElementById('loader');
+        const btn = document.getElementById('submitBtn');
+        
+        loader.style.display = 'block';
+        resultDiv.style.display = 'none';
+        btn.disabled = true;
+
+        const formData = new FormData(e.target);
+        try {
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <p class="status-success">✅ ${data.message}</p>
+                <hr>
+                <p>📊 <strong>Rows Found:</strong> ${data.rows}</p>
+                <p>📋 <strong>Columns Found:</strong> ${data.cols}</p>
+                <p>💡 <em>Ready for AI Processing.</em></p>
+            `;
+        } catch (error) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<p style="color:red">❌ Error processing request.</p>';
+        } finally {
+            loader.style.display = 'none';
+            btn.disabled = false;
+        }
+    };
+</script>
 
 </body>
 </html>
