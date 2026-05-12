@@ -1,29 +1,29 @@
 import pandas as pd
+import io
 
 class DataProcessor:
-    def __init__(self, df):
-        self.df = df
+    def __init__(self):
+        self.data = None
 
-    def clean_data(self):
-        """Perform automated data cleaning."""
-        # 1. Remove duplicate rows
-        self.df.drop_duplicates(inplace=True)
-        
-        # 2. Handle missing values
-        for col in self.df.columns:
-            if self.df[col].dtype == 'object':
-                # Fill missing text with 'Unknown'
-                self.df[col] = self.df[col].fillna("Unknown")
-            else:
-                # Fill missing numbers with the average (Mean)
-                self.df[col] = self.df[col].fillna(self.df[col].mean())
-        
-        return self.df
+    def process_csv(self, file_contents):
+        try:
+            # Loading data from the stream
+            self.data = pd.read_csv(io.StringIO(file_contents), sep=None, engine='python')
+            return {
+                "rows": len(self.data),
+                "cols": len(self.data.columns),
+                "columns_list": list(self.data.columns)
+            }
+        except Exception as e:
+            return {"error": str(e)}
 
-    def get_info(self):
-        """Return basic statistics about the processed data."""
-        return {
-            "rows": len(self.df),
-            "cols": len(self.df.columns),
-            "nulls": self.df.isnull().sum().sum()
-        }
+    def analyze_with_question(self, question):
+        if self.data is None:
+            return "No data available to analyze."
+        
+        # Simple Logic to simulate AI insights based on the question
+        summary = self.data.describe().to_dict()
+        response = f"Based on your question: '{question}', I found {len(self.data.columns)} variables. "
+        response += "The system is ready to perform deep statistical analysis on these fields."
+        
+        return response
