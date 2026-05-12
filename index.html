@@ -7,18 +7,31 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 550px; text-align: center; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .container { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 600px; text-align: center; }
         h1 { color: var(--primary); margin-bottom: 0.5rem; font-size: 1.8rem; }
-        p { color: #64748b; margin-bottom: 2rem; }
-        .upload-box { border: 2px dashed #cbd5e1; padding: 2rem; border-radius: 12px; position: relative; transition: 0.3s; }
+        p { color: #64748b; margin-bottom: 1.5rem; }
+        .upload-box { border: 2px dashed #cbd5e1; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; transition: 0.3s; }
         .upload-box:hover { border-color: var(--primary); background: #eff6ff; }
-        input[type="file"] { width: 100%; cursor: pointer; }
-        button { background: var(--primary); color: white; border: none; padding: 1rem; border-radius: 8px; font-weight: 600; margin-top: 1.5rem; width: 100%; cursor: pointer; font-size: 1rem; transition: 0.3s; }
+        
+        /* New Input Style */
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+            margin-bottom: 1rem;
+            box-sizing: border-box;
+        }
+        textarea:focus { outline: none; border-color: var(--primary); ring: 2px solid var(--primary); }
+
+        button { background: var(--primary); color: white; border: none; padding: 1rem; border-radius: 8px; font-weight: 600; width: 100%; cursor: pointer; font-size: 1rem; transition: 0.3s; }
         button:hover { background: #1d4ed8; transform: translateY(-2px); }
-        #result { margin-top: 2rem; padding: 1rem; border-radius: 8px; display: none; text-align: left; background: #f1f5f9; border-left: 4px solid var(--primary); }
-        .status-success { color: #059669; font-weight: bold; }
-        .loader { display: none; margin: 10px auto; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        #result { margin-top: 2rem; padding: 1rem; border-radius: 8px; display: none; text-align: left; background: #f1f5f9; border-left: 4px solid var(--primary); line-height: 1.6; }
+        .loader { display: none; margin: 15px auto; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -26,13 +39,16 @@
 
 <div class="container">
     <h1>AI Data Analyst</h1>
-    <p>Upload CSV to get instant insights</p>
+    <p>Upload data and ask your questions</p>
     
     <form id="uploadForm">
         <div class="upload-box">
             <input type="file" name="file" id="fileInput" accept=".csv" required>
         </div>
-        <button type="submit" id="submitBtn">Analyze Data</button>
+
+        <textarea name="question" id="questionInput" placeholder="Ask a question about your data (e.g., Summarize the average values)..."></textarea>
+
+        <button type="submit" id="submitBtn">Run AI Analysis</button>
     </form>
 
     <div class="loader" id="loader"></div>
@@ -60,15 +76,16 @@
             
             resultDiv.style.display = 'block';
             resultDiv.innerHTML = `
-                <p class="status-success">✅ ${data.message}</p>
-                <hr>
-                <p>📊 <strong>Rows Found:</strong> ${data.rows}</p>
-                <p>📋 <strong>Columns Found:</strong> ${data.cols}</p>
-                <p>💡 <em>Ready for AI Processing.</em></p>
+                <div style="color: #059669; font-weight: bold; margin-bottom: 10px;">✅ Analysis Complete</div>
+                <div style="font-size: 0.9rem;">
+                    <p><strong>File Info:</strong> ${data.rows} rows, ${data.cols} columns</p>
+                    <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 10px 0;">
+                    <p><strong>AI Insights:</strong><br>${data.message}</p>
+                </div>
             `;
         } catch (error) {
             resultDiv.style.display = 'block';
-            resultDiv.innerHTML = '<p style="color:red">❌ Error processing request.</p>';
+            resultDiv.innerHTML = '<p style="color:red">❌ Error connecting to AI server.</p>';
         } finally {
             loader.style.display = 'none';
             btn.disabled = false;
