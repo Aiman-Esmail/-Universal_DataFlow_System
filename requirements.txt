@@ -7,3 +7,4 @@ numpy==1.24.3
 Werkzeug==2.3.7
 google-genai
 imbalanced-learn
+gunicorn
