@@ -11,6 +11,7 @@
             --accent-color: #e74c3c;
             --bg-color: #f4f7f6;
             --white: #ffffff;
+            --chat-bg: #ffffff;
         }
 
         body {
@@ -47,9 +48,7 @@
             background: #ebf5fb;
         }
 
-        input[type="file"] {
-            margin-bottom: 20px;
-        }
+        input[type="file"] { margin-bottom: 20px; }
 
         button {
             background-color: var(--secondary-color);
@@ -72,8 +71,6 @@
             border-radius: 4px;
         }
 
-        .agent-report h3 { margin-top: 0; color: #0c5460; }
-
         .download-btn {
             display: inline-block;
             margin-top: 15px;
@@ -90,16 +87,50 @@
             border-collapse: collapse;
             margin-top: 30px;
             overflow-x: auto;
-            display: block;
         }
 
-        .data-table table { width: 100%; }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
         th { background-color: var(--primary-color); color: white; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+
+        /* --- AI Chatbot Styles --- */
+        .chat-section {
+            margin-top: 40px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            background: var(--chat-bg);
+        }
+
+        .chat-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+
+        #chat-window {
+            height: 250px;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #eee;
+            background: #fdfdfd;
+        }
+
+        .chat-message { margin-bottom: 15px; padding: 10px; border-radius: 8px; max-width: 80%; }
+        .user-msg { background: #e3f2fd; margin-left: auto; color: #1565c0; border-bottom-right-radius: 2px; }
+        .ai-msg { background: #f1f1f1; margin-right: auto; color: #333; border-bottom-left-radius: 2px; }
+
+        .chat-input-area { display: flex; padding: 15px; background: #fff; }
+        #user-query {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            outline: none;
+        }
+        .send-btn { margin-left: 10px; background: var(--secondary-color); }
     </style>
 </head>
 <body>
@@ -142,7 +173,53 @@
         {% endfor %}
     </div>
     {% endif %}
+
+    <div class="chat-section">
+        <div class="chat-header">
+            <span>💬 AI Data Assistant (Explainable AI)</span>
+        </div>
+        <div id="chat-window">
+            <div class="chat-message ai-msg">
+                Hello! I am your Data Assistant. Ask me anything about the cleaning process or the dataset.
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="user-query" placeholder="Ask a question about your data..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button class="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
 </div>
+
+<script>
+    async function sendMessage() {
+        const inputField = document.getElementById('user-query');
+        const chatWindow = document.getElementById('chat-window');
+        const message = inputField.value.trim();
+
+        if (!message) return;
+
+        // Add user message to UI
+        chatWindow.innerHTML += `<div class="chat-message user-msg">${message}</div>`;
+        inputField.value = '';
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+
+        try {
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: message })
+            });
+
+            const data = await response.json();
+            
+            // Add AI response to UI
+            chatWindow.innerHTML += `<div class="chat-message ai-msg">${data.response}</div>`;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        } catch (error) {
+            chatWindow.innerHTML += `<div class="chat-message ai-msg" style="color: red;">Error connecting to AI Assistant.</div>`;
+        }
+    }
+</script>
 
 </body>
 </html>
