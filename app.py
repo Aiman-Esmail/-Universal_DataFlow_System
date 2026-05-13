@@ -1,88 +1,34 @@
 import os
+from flask import Flask, render_template, request
 import pandas as pd
-from dotenv import load_dotenv
-from groq import Groq
+from data_processor import process_data
 
-# Load environment variables from .env file
-load_dotenv()
+app = Flask(__name__)
+# Ensure a directory for processed files
+UPLOAD_FOLDER = 'static/downloads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
-# Initialize API key and Client
-# This setup ensures your API key remains private
-api_key = os.getenv("GROQ_API_KEY")
-if not api_key:
-    raise EnvironmentError("Critical Error: GROQ_API_KEY is not set in the environment.")
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-client = Groq(api_key=api_key)
+@app.route('/upload', methods=['POST'])
+def upload():
+    file = request.files.get('file')
+    if not file: return "No file", 400
 
-def get_ai_insight(data_summary, sample_rows):
-    """
-    Sends data context to Llama-3 model for professional analysis.
-    """
-    prompt = f"""
-    You are a professional Data Analyst.
+    df = pd.read_csv(file)
     
-    ### Dataset Preview (First 5 Rows):
-    {sample_rows}
+    # Run the smart processing
+    cleaned_df, report = process_data(df)
     
-    ### Statistical Summary:
-    {data_summary}
+    # Save the cleaned file
+    filename = "cleaned_data.csv"
+    cleaned_df.to_csv(os.path.join(UPLOAD_FOLDER, filename), index=False)
     
-    ### Analysis Goal:
-    1. Identify hidden trends within the variables.
-    2. Suggest potential areas for predictive modeling.
-    3. Highlight any data quality issues or outliers.
-    """
-
-    try:
-        chat_completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "Provide technical and concise analysis in professional English."
-                },
-                {
-                    "role": "user", 
-                    "content": prompt
-                }
-            ],
-            temperature=0.4,
-            max_tokens=1000
-        )
-        return chat_completion.choices[0].message.content
-    except Exception as e:
-        return f"AI Generation Error: {str(e)}"
-
-def analyze_dataset(file_path):
-    """
-    Handles CSV reading and initiates AI processing.
-    """
-    try:
-        # Load dataset using pandas
-        df = pd.read_csv(file_path)
-        
-        # Prepare summaries for the LLM
-        stats = df.describe(include='all').to_string()
-        preview = df.head().to_string()
-        
-        print(f"Dataset loaded: {len(df)} rows detected.")
-        
-        # Request AI Analysis
-        return get_ai_insight(stats, preview)
-
-    except Exception as e:
-        return f"Data Load Error: {str(e)}"
-
-if __name__ == "__main__":
-    # Specify the target data file
-    # Ensure 'data.csv' is in your project directory
-    target_csv = 'data.csv' 
-    
-    if os.path.exists(target_csv):
-        report = analyze_dataset(target_csv)
-        print("\n" + "="*30)
-        print(" AUTOMATED DATA REPORT ")
-        print("="*30 + "\n")
-        print(report)
-    else:
-        print(f"Error: The file '{target_csv}' was not found.")
+    return render_template('index.html', 
+                           report=report, 
+                           download_url=filename,
+                           tables=[cleaned_df.head(10).to_html(classes='data')], 
+                           titles=cleaned_df.columns.values)
