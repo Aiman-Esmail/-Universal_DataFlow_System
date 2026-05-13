@@ -8,3 +8,4 @@ Werkzeug==2.3.7
 google-genai
 imbalanced-learn
 gunicorn
+groq
