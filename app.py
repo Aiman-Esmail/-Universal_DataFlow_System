@@ -147,7 +147,6 @@ def process_data():
         final_stats = {"rows": len(df_cleaned)}
         real_stats = df_cleaned.describe(include='all').to_string()
 
-        # FIXED: Initial Report is now strictly English
         prompt = f"""
 Generate a professional AI Data Analysis Report in English.
 Use ONLY the following real data statistics, do not invent any numbers:
@@ -164,9 +163,9 @@ Summary:
 
 Rules:
 - Output MUST be in English only.
-- Use ONLY the numbers from the real statistics above.
-- Do NOT invent or assume any values.
-- Provide output in clean bullet points.
+- Use ONLY the numbers from the real statistics above
+- Do NOT invent or assume any values
+- Provide output in clean bullet points
 """
 
         response = client.chat.completions.create(
@@ -218,7 +217,6 @@ def chat():
         columns = list(df_cleaned.columns)
         shape = df_cleaned.shape
 
-        # System Prompt allows for both Arabic and English responses
         system_prompt = f"""You are an AI Data Analyst chatbot for the Universal DataFlow System.
 
 Dataset Info: {shape[0]} rows, {shape[1]} columns.
@@ -238,7 +236,7 @@ Sample Data:
 
 Rules:
 - Answer ONLY based on the provided data.
-- Respond in the SAME LANGUAGE as the user (Arabic or English).
+- Respond in the SAME LANGUAGE as the user (Arabic, English, or German).
 - If asked about cleaning, explain the operations listed above.
 - Be concise and clear.
 """
