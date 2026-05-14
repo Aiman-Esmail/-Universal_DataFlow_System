@@ -10,7 +10,6 @@
             background-color: #f0f2f5;
             font-family: 'Segoe UI', sans-serif;
         }
-
         .hero {
             background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
             color: white;
@@ -19,18 +18,8 @@
             margin-bottom: 30px;
             text-align: center;
         }
-
-        .hero h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-
-        .hero p {
-            font-size: 1.1rem;
-            color: #a0aec0;
-        }
-
+        .hero h1 { font-size: 2.5rem; font-weight: 700; }
+        .hero p { color: #a0aec0; font-size: 1.1rem; }
         .card-custom {
             background: white;
             border-radius: 16px;
@@ -38,13 +27,6 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             margin-bottom: 25px;
         }
-
-        .card-custom h4 {
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #1a1a2e;
-        }
-
         .upload-area {
             border: 2px dashed #cbd5e0;
             border-radius: 12px;
@@ -53,26 +35,10 @@
             background: #f7fafc;
             transition: 0.3s;
         }
-
-        .upload-area:hover {
-            border-color: #4299e1;
-            background: #ebf8ff;
-        }
-
-        .upload-area input[type="file"] {
-            display: none;
-        }
-
-        .upload-label {
-            cursor: pointer;
-            display: block;
-        }
-
-        .upload-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
-        }
-
+        .upload-area:hover { border-color: #4299e1; background: #ebf8ff; }
+        .upload-area input[type="file"] { display: none; }
+        .upload-label { cursor: pointer; display: block; }
+        .upload-icon { font-size: 3rem; margin-bottom: 10px; }
         .btn-process {
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
@@ -85,13 +51,7 @@
             margin-top: 15px;
             transition: 0.3s;
         }
-
-        .btn-process:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-            color: white;
-        }
-
+        .btn-process:hover { opacity: 0.9; transform: translateY(-1px); color: white; }
         .btn-download {
             background: linear-gradient(135deg, #38a169, #2f855a);
             color: white;
@@ -105,19 +65,8 @@
             margin-top: 15px;
             transition: 0.3s;
         }
-
-        .btn-download:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-            color: white;
-        }
-
-        .alert-custom {
-            border-radius: 10px;
-            padding: 15px 20px;
-            font-weight: 500;
-        }
-
+        .btn-download:hover { opacity: 0.9; transform: translateY(-1px); color: white; }
+        .alert-custom { border-radius: 10px; padding: 15px 20px; font-weight: 500; }
         .ai-report {
             background: #1a1a2e;
             color: #e2e8f0;
@@ -127,35 +76,16 @@
             line-height: 1.8;
             white-space: pre-wrap;
         }
-
-        .table-wrapper {
-            overflow-x: auto;
-            border-radius: 10px;
-        }
-
-        .table {
-            border-radius: 10px;
-            overflow: hidden;
-            font-size: 0.9rem;
-        }
-
-        .table thead {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-        }
-
+        .table-wrapper { overflow-x: auto; border-radius: 10px; }
+        .table { font-size: 0.9rem; }
+        .table thead { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
         .chart-img {
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             width: 100%;
             transition: 0.3s;
         }
-
-        .chart-img:hover {
-            transform: scale(1.02);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-
+        .chart-img:hover { transform: scale(1.02); }
         .section-title {
             font-size: 1.4rem;
             font-weight: 700;
@@ -164,49 +94,100 @@
             padding-left: 12px;
             margin-bottom: 20px;
         }
+        .loading { display: none; text-align: center; padding: 20px; }
+        .spinner-border { width: 3rem; height: 3rem; color: #667eea; }
+        .file-name { margin-top: 10px; font-size: 0.9rem; color: #4a5568; font-weight: 500; }
 
-        .loading {
-            display: none;
-            text-align: center;
+        /* Chatbot */
+        .chat-container {
+            height: 420px;
+            overflow-y: auto;
+            background: #f7fafc;
+            border-radius: 12px;
             padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid #e2e8f0;
         }
-
-        .spinner-border {
-            width: 3rem;
-            height: 3rem;
-            color: #667eea;
+        .chat-bubble {
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            margin-bottom: 12px;
+            font-size: 0.92rem;
+            line-height: 1.6;
+            word-wrap: break-word;
         }
-
-        .file-name {
-            margin-top: 10px;
-            font-size: 0.9rem;
-            color: #4a5568;
-            font-weight: 500;
+        .chat-bubble.user {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
         }
-
-        .badge-stat {
+        .chat-bubble.bot {
+            background: #1a1a2e;
+            color: #e2e8f0;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+        .chat-bubble.typing {
+            background: #e2e8f0;
+            color: #718096;
+        }
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input {
+            flex: 1;
+            border-radius: 10px;
+            border: 1px solid #cbd5e0;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.3s;
+        }
+        .chat-input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.15); }
+        .btn-send {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .btn-send:hover { opacity: 0.9; transform: translateY(-1px); }
+        .chat-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .suggestion-btn {
             background: #ebf4ff;
             color: #3182ce;
-            border-radius: 8px;
+            border: 1px solid #bee3f8;
+            border-radius: 20px;
             padding: 6px 14px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin: 4px;
-            display: inline-block;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: 0.3s;
         }
+        .suggestion-btn:hover { background: #3182ce; color: white; }
     </style>
 </head>
 <body>
 <div class="container py-5">
 
-    <!-- Hero Section -->
+    <!-- Hero -->
     <div class="hero">
         <div class="upload-icon">🤖</div>
         <h1>Universal DataFlow System</h1>
         <p>AI-Powered Data Cleaning, Analysis & Visualization</p>
     </div>
 
-    <!-- Upload Section -->
+    <!-- Upload -->
     <div class="card-custom">
         <h4>📂 Upload Your CSV File</h4>
         <form action="/process" method="POST" enctype="multipart/form-data" id="uploadForm">
@@ -223,19 +204,15 @@
                 ⚡ Process & Analyze Data
             </button>
         </form>
-
-        <!-- Loading Spinner -->
         <div class="loading" id="loading">
             <div class="spinner-border" role="status"></div>
-            <div class="mt-3" style="color:#667eea; font-weight:600;">
-                AI is analyzing your data...
-            </div>
+            <div class="mt-3" style="color:#667eea; font-weight:600;">AI is analyzing your data...</div>
         </div>
     </div>
 
     <!-- Message -->
     {% if message %}
-    <div class="alert alert-custom 
+    <div class="alert alert-custom
         {% if 'Error' in message %} alert-danger
         {% elif 'Successfully' in message %} alert-success
         {% else %} alert-info {% endif %}">
@@ -256,12 +233,8 @@
     {% if tables %}
     <div class="card-custom">
         <div class="section-title">📋 Data Preview (First 10 Rows)</div>
-        <div class="table-wrapper">
-            {{ tables[0] | safe }}
-        </div>
-        <a href="/download" class="btn-download">
-            📥 Download Cleaned Excel File
-        </a>
+        <div class="table-wrapper">{{ tables[0] | safe }}</div>
+        <a href="/download" class="btn-download">📥 Download Cleaned Excel File</a>
     </div>
     {% endif %}
 
@@ -275,6 +248,42 @@
                 <img src="{{ chart }}" class="chart-img" alt="Chart {{ loop.index }}">
             </div>
             {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Chatbot -->
+    {% if tables %}
+    <div class="card-custom">
+        <div class="section-title">💬 Ask About Your Data</div>
+
+        <!-- Quick Suggestions -->
+        <div class="chat-suggestions">
+            <button class="suggestion-btn" onclick="sendSuggestion('What are the column names?')">📋 Column names</button>
+            <button class="suggestion-btn" onclick="sendSuggestion('What is the average of each numeric column?')">📊 Averages</button>
+            <button class="suggestion-btn" onclick="sendSuggestion('What are the maximum and minimum values?')">📈 Max & Min</button>
+            <button class="suggestion-btn" onclick="sendSuggestion('Are there any outliers in the data?')">🔍 Outliers</button>
+            <button class="suggestion-btn" onclick="sendSuggestion('Summarize the dataset for me')">📝 Summary</button>
+            <button class="suggestion-btn" onclick="sendSuggestion('Which column has the most missing values?')">❓ Missing values</button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="chat-container" id="chatContainer">
+            <div class="chat-bubble bot">
+                👋 Hello! I have full access to your uploaded dataset. Ask me anything about your data — statistics, comparisons, columns, values, and more!
+            </div>
+        </div>
+
+        <!-- Input -->
+        <div class="chat-input-area">
+            <input
+                type="text"
+                class="chat-input"
+                id="chatInput"
+                placeholder="Ask anything about your data..."
+                onkeypress="handleKey(event)"
+            >
+            <button class="btn-send" onclick="sendMessage()">Send ➤</button>
         </div>
     </div>
     {% endif %}
@@ -298,6 +307,50 @@
         if (file) {
             document.getElementById('loading').style.display = 'block';
         }
+    }
+
+    function handleKey(event) {
+        if (event.key === 'Enter') sendMessage();
+    }
+
+    function sendSuggestion(text) {
+        document.getElementById('chatInput').value = text;
+        sendMessage();
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        if (!message) return;
+
+        appendMessage(message, 'user');
+        input.value = '';
+
+        const typing = appendMessage('⏳ Thinking...', 'bot typing');
+
+        try {
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+            const data = await response.json();
+            typing.remove();
+            appendMessage(data.reply, 'bot');
+        } catch (error) {
+            typing.remove();
+            appendMessage('❌ Error connecting to AI. Please try again.', 'bot');
+        }
+    }
+
+    function appendMessage(text, type) {
+        const container = document.getElementById('chatContainer');
+        const bubble = document.createElement('div');
+        bubble.className = `chat-bubble ${type}`;
+        bubble.textContent = text;
+        container.appendChild(bubble);
+        container.scrollTop = container.scrollHeight;
+        return bubble;
     }
 </script>
 </body>

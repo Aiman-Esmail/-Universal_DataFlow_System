@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, jsonify
 from groq import Groq
 
 app = Flask(__name__)
@@ -19,7 +19,6 @@ df_cleaned = None
 def generate_charts(df):
     charts = []
 
-    # Chart 1: Missing Values Bar Chart
     try:
         nulls = df.isnull().sum()
         nulls = nulls[nulls > 0]
@@ -35,7 +34,6 @@ def generate_charts(df):
     except Exception:
         pass
 
-    # Chart 2: Numeric Distributions (Histogram)
     try:
         numeric_cols = df.select_dtypes(include='number').columns[:4]
         if len(numeric_cols) > 0:
@@ -53,7 +51,6 @@ def generate_charts(df):
     except Exception:
         pass
 
-    # Chart 3: Correlation Heatmap
     try:
         numeric_df = df.select_dtypes(include='number')
         if numeric_df.shape[1] >= 2:
@@ -73,7 +70,6 @@ def generate_charts(df):
     except Exception:
         pass
 
-    # Chart 4: Categorical Columns - Top 5 Values
     try:
         cat_cols = df.select_dtypes(include='object').columns[:2]
         for col in cat_cols:
@@ -90,7 +86,6 @@ def generate_charts(df):
     except Exception:
         pass
 
-    # Chart 5: Boxplot for Outlier Detection
     try:
         numeric_cols = df.select_dtypes(include='number').columns[:4]
         if len(numeric_cols) > 0:
@@ -157,8 +152,6 @@ def process_data():
                 df_cleaned[col] = df_cleaned[col].fillna("Unknown")
 
         final_stats = {"rows": len(df_cleaned)}
-
-        # Real statistics from actual data
         real_stats = df_cleaned.describe(include='all').to_string()
 
         prompt = f"""
@@ -196,9 +189,7 @@ Rules:
         )
 
         ai_report = response.choices[0].message.content
-
         charts = generate_charts(df_cleaned)
-
         preview_table = df_cleaned.head(10).to_html(
             classes='table table-hover table-bordered',
             index=True
@@ -214,6 +205,57 @@ Rules:
 
     except Exception as e:
         return render_template('index.html', message=f"Error: {str(e)}")
+
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    global df_cleaned
+
+    if df_cleaned is None:
+        return jsonify({"reply": "Please upload a CSV file first before asking questions."})
+
+    user_message = request.json.get('message', '')
+    if not user_message:
+        return jsonify({"reply": "Please enter a question."})
+
+    try:
+        real_stats = df_cleaned.describe(include='all').to_string()
+        sample_data = df_cleaned.head(10).to_string()
+        columns = list(df_cleaned.columns)
+        shape = df_cleaned.shape
+
+        system_prompt = f"""You are an AI Data Analyst chatbot. 
+You have access to the following dataset information:
+
+Dataset Shape: {shape[0]} rows, {shape[1]} columns
+Columns: {columns}
+
+Real Statistics:
+{real_stats}
+
+Sample Data (first 10 rows):
+{sample_data}
+
+Rules:
+- Answer ONLY based on the real data provided above
+- Do NOT invent or assume any values
+- Be concise and clear
+- Always respond in English
+- If asked about something not in the data, say you don't have that information"""
+
+        response = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            model="llama-3.1-8b-instant",
+        )
+
+        reply = response.choices[0].message.content
+        return jsonify({"reply": reply})
+
+    except Exception as e:
+        return jsonify({"reply": f"Error: {str(e)}"})
 
 
 @app.route('/download', methods=['GET'])
