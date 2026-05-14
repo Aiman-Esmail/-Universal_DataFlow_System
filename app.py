@@ -78,7 +78,9 @@ def generate_charts(df):
         cat_cols = df.select_dtypes(include='object').columns[:2]
         for col in cat_cols:
             fig, ax = plt.subplots(figsize=(8, 4))
-            df[col].value_counts().head(5).plot(kind='bar', ax=ax, color='mediumseagreen', edgecolor='white')
+            df[col].value_counts().head(5).plot(
+                kind='bar', ax=ax, color='mediumseagreen', edgecolor='white'
+            )
             ax.set_title(f'Top 5 Values: {col}')
             ax.set_xlabel(col)
             ax.set_ylabel('Count')
@@ -88,7 +90,7 @@ def generate_charts(df):
     except Exception:
         pass
 
-    # Chart 5: Boxplot for Numeric Columns
+    # Chart 5: Boxplot for Outlier Detection
     try:
         numeric_cols = df.select_dtypes(include='number').columns[:4]
         if len(numeric_cols) > 0:
@@ -156,24 +158,34 @@ def process_data():
 
         final_stats = {"rows": len(df_cleaned)}
 
-        # Generate Charts
-        charts = generate_charts(df_cleaned)
+        # Real statistics from actual data
+        real_stats = df_cleaned.describe(include='all').to_string()
 
         prompt = f"""
-Generate a professional AI Agent Analysis Report in English:
-- Statistics: {initial_stats['rows']} initial rows, {final_stats['rows']} final rows.
+Generate a professional AI Data Analysis Report in English.
+Use ONLY the following real data statistics, do not invent any numbers:
+
+Real Data Statistics:
+{real_stats}
+
+Summary:
+- Initial rows: {initial_stats['rows']}
+- Final rows after cleaning: {final_stats['rows']}
+- Duplicates removed: {initial_stats['duplicates']}
+- Nulls per column before cleaning: {initial_stats['nulls']}
 - Columns: {initial_stats['columns']}
-- Issues Fixed: {initial_stats['duplicates']} duplicates removed, missing values handled via Median/Mode.
-- Nulls per column: {initial_stats['nulls']}
-- Imbalance Check: Verified categorical distributions.
-Provide the output in clean English bullet points.
+
+Rules:
+- Use ONLY the numbers from the real statistics above
+- Do NOT invent or assume any values
+- Provide output in clean English bullet points
 """
 
         response = client.chat.completions.create(
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an AI Data Analyst. Provide reports only in English."
+                    "content": "You are an AI Data Analyst. Provide reports only in English. Use ONLY the data provided, never invent numbers."
                 },
                 {
                     "role": "user",
@@ -184,6 +196,8 @@ Provide the output in clean English bullet points.
         )
 
         ai_report = response.choices[0].message.content
+
+        charts = generate_charts(df_cleaned)
 
         preview_table = df_cleaned.head(10).to_html(
             classes='table table-hover table-bordered',
