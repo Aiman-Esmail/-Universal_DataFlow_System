@@ -10,4 +10,4 @@ groq
 matplotlib
 seaborn
 openpyxl
-fpdf
+fpdf==1 . 7 . 2
