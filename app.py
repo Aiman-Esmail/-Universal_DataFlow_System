@@ -6,18 +6,17 @@ from groq import Groq
 
 app = Flask(__name__)
 
-# Initialize Groq Client
-# Ensure GROQ_API_KEY is set in your Render Environment Variables
+# Initialize Groq Client using the Environment Variable
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
+# Shared variable for the cleaned data
 df_cleaned = None 
 
-# 1. Home Route (Fixes the 404 error)
 @app.route('/')
 def home():
+    # This ensures the main page opens correctly
     return render_template('index.html')
 
-# 2. Processing Route (Cleaning + AI Report)
 @app.route('/process', methods=['POST'])
 def process_data():
     global df_cleaned
@@ -30,44 +29,45 @@ def process_data():
         return render_template('index.html', message="No file selected")
 
     try:
-        # Load and Clean Data
+        # 1. Load Data
         df = pd.read_csv(file)
-        initial_rows = len(df)
+        initial_count = len(df)
         
+        # 2. Automated Cleaning Logic
         df_cleaned = df.drop_duplicates().fillna(0)
-        final_rows = len(df_cleaned)
+        final_count = len(df_cleaned)
         
-        # Prepare info for AI report
-        stats = f"Initial rows: {initial_rows}, Final rows: {final_rows}, Removed: {initial_rows - final_rows}"
+        # 3. Create Stats for AI
+        stats_report = f"Initial: {initial_count} rows. Final: {final_count} rows. Removed: {initial_count - final_count} duplicates/nulls."
         
-        # Generate AI Report using Llama 3.1
-        response = client.chat.completions.create(
+        # 4. Get AI Explanation from Llama 3.1
+        completion = client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "You are a data expert. Explain the cleaning steps clearly in Arabic based on the provided stats."},
-                {"role": "user", "content": stats}
+                {"role": "system", "content": "You are a professional data expert. Explain the cleaning steps clearly in Arabic based on the provided statistics."},
+                {"role": "user", "content": stats_report}
             ],
             model="llama-3.1-8b-instant",
         )
-        ai_report = response.choices[0].message.content
+        ai_explanation = completion.choices[0].message.content
         
-        # Return everything to the UI
+        # 5. Return all results to the webpage
         return render_template('index.html', 
-                               message="Processing Complete!", 
-                               ai_response=ai_report)
+                               message="Success! Data processed.", 
+                               ai_response=ai_explanation)
                                
     except Exception as e:
-        return render_template('index.html', message=f"Error: {str(e)}")
+        return render_template('index.html', message=f"Error during processing: {str(e)}")
 
-# 3. Download Route (Smart Export)
 @app.route('/download', methods=['GET'])
 def download_file():
     global df_cleaned
     if df_cleaned is None:
-        return "No data processed", 400
+        return "No processed data found.", 400
 
+    # Create Excel file in memory
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_cleaned.to_excel(writer, index=False, sheet_name='CleanedData')
+        df_cleaned.to_excel(writer, index=False, sheet_name='CleanData')
     
     output.seek(0)
     return send_file(
