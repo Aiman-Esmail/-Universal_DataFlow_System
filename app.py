@@ -147,11 +147,9 @@ def process_data():
         final_stats = {"rows": len(df_cleaned)}
         real_stats = df_cleaned.describe(include='all').to_string()
 
-        # Modified prompt to support Arabic in the AI Report
+        # FIXED: Initial Report is now strictly English
         prompt = f"""
-Generate a professional AI Data Analysis Report.
-The report should be in Arabic if possible, or the same language as the dataset context.
-
+Generate a professional AI Data Analysis Report in English.
 Use ONLY the following real data statistics, do not invent any numbers:
 
 Real Data Statistics:
@@ -165,16 +163,17 @@ Summary:
 - Columns: {initial_stats['columns']}
 
 Rules:
-- Use ONLY the numbers from the real statistics above
-- Do NOT invent or assume any values
-- Provide output in clean bullet points
+- Output MUST be in English only.
+- Use ONLY the numbers from the real statistics above.
+- Do NOT invent or assume any values.
+- Provide output in clean bullet points.
 """
 
         response = client.chat.completions.create(
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an AI Data Analyst. Provide reports in Arabic or English based on context. Use ONLY the data provided, never invent numbers."
+                    "content": "You are an AI Data Analyst. Provide reports strictly in English. Use ONLY the data provided, never invent numbers."
                 },
                 {
                     "role": "user",
@@ -219,7 +218,7 @@ def chat():
         columns = list(df_cleaned.columns)
         shape = df_cleaned.shape
 
-        # System Prompt modified for Arabic support and Cleaning Context
+        # System Prompt allows for both Arabic and English responses
         system_prompt = f"""You are an AI Data Analyst chatbot for the Universal DataFlow System.
 
 Dataset Info: {shape[0]} rows, {shape[1]} columns.
