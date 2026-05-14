@@ -21,6 +21,7 @@ df_original = None
 df_cleaned = None
 latest_ai_report = "No report generated yet."
 latest_viz_report = "No visualization report yet."
+preprocessing_steps = []
 
 plt.rcParams['figure.max_open_warning'] = 0
 
@@ -112,7 +113,7 @@ def home():
 
 @app.route('/process', methods=['POST'])
 def process_data():
-    global df_original, df_cleaned, latest_ai_report, latest_viz_report
+    global df_original, df_cleaned, latest_ai_report, latest_viz_report, preprocessing_steps
 
     if 'file' not in request.files:
         return render_template('index.html', message="No file uploaded")
@@ -132,15 +133,20 @@ def process_data():
         }
 
         df_cleaned = df_original.drop_duplicates().copy()
+        preprocessing_steps = []
 
-        preprocessing_log = []
+        if initial_stats['duplicates'] > 0:
+            preprocessing_steps.append(
+                f"Removed {initial_stats['duplicates']} duplicate rows"
+            )
+
         for col in df_cleaned.columns:
             if df_cleaned[col].dtype == 'object':
                 mode_val = df_cleaned[col].mode()
                 fill_val = mode_val[0] if not mode_val.empty else "Unknown"
                 nulls_count = df_cleaned[col].isnull().sum()
                 if nulls_count > 0:
-                    preprocessing_log.append(
+                    preprocessing_steps.append(
                         f"Column '{col}': filled {nulls_count} nulls with mode '{fill_val}'"
                     )
                 df_cleaned[col] = df_cleaned[col].fillna(fill_val)
@@ -148,12 +154,15 @@ def process_data():
                 med_val = df_cleaned[col].median()
                 nulls_count = df_cleaned[col].isnull().sum()
                 if nulls_count > 0:
-                    preprocessing_log.append(
+                    preprocessing_steps.append(
                         f"Column '{col}': filled {nulls_count} nulls with median {med_val:.2f}"
                     )
                 df_cleaned[col] = df_cleaned[col].fillna(med_val)
             else:
                 df_cleaned[col] = df_cleaned[col].fillna("Unknown")
+
+        if not preprocessing_steps:
+            preprocessing_steps.append("No missing values or duplicates found — data is already clean!")
 
         final_stats = {"rows": len(df_cleaned)}
         real_stats = df_cleaned.describe(include='all').to_string()
@@ -168,7 +177,7 @@ Final rows after cleaning: {final_stats['rows']}
 Duplicates removed: {initial_stats['duplicates']}
 Nulls per column before cleaning: {initial_stats['nulls']}
 Columns: {initial_stats['columns']}
-Preprocessing actions: {preprocessing_log}
+Preprocessing actions applied: {preprocessing_steps}
 
 Real Statistics after cleaning:
 {real_stats}
@@ -241,7 +250,7 @@ Use ONLY real statistics. Clean English bullet points.
             final_rows=final_stats['rows'],
             duplicates=initial_stats['duplicates'],
             columns=initial_stats['columns'],
-            preprocessing_log=preprocessing_log
+            preprocessing_log=preprocessing_steps
         )
 
     except Exception as e:
@@ -250,7 +259,7 @@ Use ONLY real statistics. Clean English bullet points.
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    global df_cleaned
+    global df_cleaned, preprocessing_steps
 
     if df_cleaned is None:
         return jsonify({"reply": "Please upload a CSV file first before asking questions."})
@@ -266,8 +275,9 @@ def chat():
         system_prompt = f"""You are a strict Data Analysis Assistant.
 Your ONLY job is to answer questions about the uploaded dataset.
 
-Dataset: {df_cleaned.shape[0]} rows, {df_cleaned.shape[1]} columns
-Columns: {list(df_cleaned.columns)}
+Dataset Info:
+- Shape: {df_cleaned.shape[0]} rows, {df_cleaned.shape[1]} columns
+- Columns: {list(df_cleaned.columns)}
 
 Real Statistics:
 {real_stats}
@@ -275,14 +285,17 @@ Real Statistics:
 Sample Data:
 {sample_data}
 
+Data Cleaning Steps That Were Applied:
+{preprocessing_steps}
+
 STRICT RULES:
-- ONLY answer questions directly related to this dataset and its analysis
-- If the user asks ANYTHING outside data analysis such as recipes, general knowledge, coding help, jokes, stories, or any unrelated topic, respond ONLY with exactly this message: "I am a Data Analysis Assistant. I can only answer questions about your uploaded dataset. Please ask me about your data statistics, columns, values, or analysis."
-- Never provide recipes, stories, advice, or any off-topic content under any circumstances
-- Never go outside the context of the provided dataset
-- Do NOT invent or assume any values not present in the data
-- Always respond in English
-- Be concise and clear"""
+1. Answer in the SAME language the user uses (Arabic, English, German, French, etc.)
+2. ONLY answer questions directly related to this dataset and its analysis
+3. Topics you CAN answer: data cleaning steps, statistics, columns, values, preprocessing, correlations, outliers, distributions, missing values, duplicates
+4. Topics you MUST REFUSE: recipes, cooking, general knowledge, jokes, stories, coding help unrelated to this data, or ANY topic not about this dataset
+5. If user asks something off-topic, respond in their language with: "I am a Data Analysis Assistant. I can only answer questions about your uploaded dataset."
+6. Never invent or assume values not present in the data
+7. Be concise, clear, and professional"""
 
         response = client.chat.completions.create(
             messages=[
