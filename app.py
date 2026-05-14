@@ -3,7 +3,7 @@ import io
 import os
 import base64
 import matplotlib
-matplotlib.use('Agg') # Essential for server-side rendering
+matplotlib.use('Agg') # Corrects the 'No open ports' and GUI errors on Render
 import matplotlib.pyplot as plt
 import seaborn as sns
 from flask import Flask, render_template, request, send_file, jsonify
@@ -15,7 +15,7 @@ app = Flask(__name__)
 # Initialize Groq Client
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# Global storage
+# Global storage for session
 df_cleaned = None
 latest_ai_report = "No report generated yet."
 
@@ -129,7 +129,7 @@ def download_pdf():
     except Exception as e:
         return f"PDF Error: {str(e)}"
 
-# Critical fix for Render Port Binding
+# MANDATORY: Port binding for Render deployment
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
