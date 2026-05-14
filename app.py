@@ -4,21 +4,39 @@ from flask import Flask, render_template, request, send_file
 
 app = Flask(__name__)
 
-# This is a placeholder for your cleaned dataframe
-# In your actual code, this should be the result of your cleaning process
+# Global variable to store the cleaned data temporarily
 df_cleaned = None 
 
+# Root route to serve the main landing page (Fixes 404 error)
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+# Route to process uploaded data
 @app.route('/process', methods=['POST'])
 def process_data():
     global df_cleaned
-    # 1. Get the file from request
-    # 2. Perform automated cleaning (Your existing logic)
-    # Example:
-    # df = pd.read_csv(request.files['file'])
-    # df_cleaned = df.drop_duplicates().fillna(0)
     
-    return render_template('index.html', message="Data cleaned successfully!")
+    if 'file' not in request.files:
+        return render_template('index.html', message="No file uploaded")
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return render_template('index.html', message="No file selected")
 
+    try:
+        # Loading data (Assuming CSV for this example)
+        df = pd.read_csv(file)
+        
+        # Automated Cleaning Logic
+        df_cleaned = df.drop_duplicates().fillna(0)
+        
+        return render_template('index.html', message="Data processed successfully!")
+    except Exception as e:
+        return render_template('index.html', message=f"Error: {str(e)}")
+
+# Route to download the cleaned Excel file
 @app.route('/download', methods=['GET'])
 def download_file():
     global df_cleaned
@@ -26,17 +44,14 @@ def download_file():
     if df_cleaned is None:
         return "No data available to download", 400
 
-    # Create an in-memory output file for the Excel data
     output = io.BytesIO()
     
-    # Use Pandas with xlsxwriter engine to save the file to memory
+    # Using xlsxwriter to create the Excel file in memory
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_cleaned.to_excel(writer, index=False, sheet_name='Cleaned_Data')
+        df_cleaned.to_excel(writer, index=False, sheet_name='Cleaned_Results')
     
-    # Reset the pointer to the beginning of the stream
     output.seek(0)
     
-    # Return the file to the user's browser
     return send_file(
         output,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
