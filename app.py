@@ -3,7 +3,7 @@ import io
 import os
 import base64
 import matplotlib
-matplotlib.use('Agg') # Corrects the 'No open ports' and GUI errors on Render
+matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
 import seaborn as sns
 from flask import Flask, render_template, request, send_file, jsonify
@@ -15,7 +15,7 @@ app = Flask(__name__)
 # Initialize Groq Client
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# Global storage for session
+# Global variables
 df_cleaned = None
 latest_ai_report = "No report generated yet."
 
@@ -94,7 +94,7 @@ def chat():
         return jsonify({"reply": "Please upload data first."})
 
     user_msg = request.json.get('message', '')
-    system_instruction = "You are a Data Analyst. Only discuss data. Reject non-data topics."
+    system_instruction = "You are a Data Analyst assistant. Only answer questions related to your data analysis."
 
     try:
         response = client.chat.completions.create(
@@ -129,7 +129,7 @@ def download_pdf():
     except Exception as e:
         return f"PDF Error: {str(e)}"
 
-# MANDATORY: Port binding for Render deployment
+# MANDATORY: Fix for Render Port Binding
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
