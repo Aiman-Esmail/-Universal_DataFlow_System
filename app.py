@@ -13,6 +13,7 @@ app = Flask(__name__)
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
+# Global variable to store the cleaned data across routes
 df_cleaned = None
 
 def generate_charts(df):
@@ -68,34 +69,6 @@ def generate_charts(df):
     except Exception:
         pass
 
-    try:
-        cat_cols = df.select_dtypes(include='object').columns[:2]
-        for col in cat_cols:
-            fig, ax = plt.subplots(figsize=(8, 4))
-            df[col].value_counts().head(5).plot(
-                kind='bar', ax=ax, color='mediumseagreen', edgecolor='white'
-            )
-            ax.set_title(f'Top 5 Values: {col}')
-            ax.set_xlabel(col)
-            ax.set_ylabel('Count')
-            plt.tight_layout()
-            charts.append(fig_to_base64(fig))
-            plt.close(fig)
-    except Exception:
-        pass
-
-    try:
-        numeric_cols = df.select_dtypes(include='number').columns[:4]
-        if len(numeric_cols) > 0:
-            fig, ax = plt.subplots(figsize=(10, 5))
-            df[numeric_cols].boxplot(ax=ax)
-            ax.set_title('Boxplot - Outlier Detection')
-            plt.tight_layout()
-            charts.append(fig_to_base64(fig))
-            plt.close(fig)
-    except Exception:
-        pass
-
     return charts
 
 def fig_to_base64(fig):
@@ -129,6 +102,7 @@ def process_data():
             "duplicates": int(df.duplicated().sum())
         }
 
+        # Data Preprocessing Logic
         df_cleaned = df.drop_duplicates().copy()
 
         for col in df_cleaned.columns:
@@ -141,57 +115,42 @@ def process_data():
                 df_cleaned[col] = df_cleaned[col].fillna(
                     df_cleaned[col].median()
                 )
-            else:
-                df_cleaned[col] = df_cleaned[col].fillna("Unknown")
 
         final_stats = {"rows": len(df_cleaned)}
         real_stats = df_cleaned.describe(include='all').to_string()
 
+        # Detailed Preprocessing Report Prompt
         prompt = f"""
-Generate a professional AI Data Analysis Report in English.
-Use ONLY the following real data statistics, do not invent any numbers:
+Generate a professional AI Data Analysis and Preprocessing Report.
+Dataset Summary:
+- Initial Records: {initial_stats['rows']}
+- Final Records after removing {initial_stats['duplicates']} duplicates: {final_stats['rows']}
+- Missing values handled in columns: {initial_stats['columns']}
 
-Real Data Statistics:
+Stats after processing:
 {real_stats}
 
-Summary:
-- Initial rows: {initial_stats['rows']}
-- Final rows after cleaning: {final_stats['rows']}
-- Duplicates removed: {initial_stats['duplicates']}
-- Nulls per column before cleaning: {initial_stats['nulls']}
-- Columns: {initial_stats['columns']}
-
-Rules:
-- Output MUST be in English only.
-- Use ONLY the numbers from the real statistics above
-- Do NOT invent or assume any values
-- Provide output in clean bullet points
+Requirements:
+1. Explain the preprocessing steps taken (Duplicate removal, Null handling).
+2. Summarize key statistical insights.
+3. Output MUST be in English and use bullet points.
 """
 
         response = client.chat.completions.create(
             messages=[
-                {
-                    "role": "system",
-                    "content": "You are an AI Data Analyst. Provide reports strictly in English. Use ONLY the data provided, never invent numbers."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
+                {"role": "system", "content": "You are a professional Data Scientist. Provide detailed reports in English only."},
+                {"role": "user", "content": prompt}
             ],
             model="llama-3.1-8b-instant",
         )
 
         ai_report = response.choices[0].message.content
         charts = generate_charts(df_cleaned)
-        preview_table = df_cleaned.head(10).to_html(
-            classes='table table-hover table-bordered',
-            index=True
-        )
+        preview_table = df_cleaned.head(10).to_html(classes='table table-striped', index=True)
 
         return render_template(
             'index.html',
-            message="Data Cleaned Successfully!",
+            message="Data Processed and Cleaned Successfully!",
             ai_response=ai_report,
             tables=[preview_table],
             charts=charts
@@ -203,43 +162,16 @@ Rules:
 @app.route('/chat', methods=['POST'])
 def chat():
     global df_cleaned
-
     if df_cleaned is None:
-        return jsonify({"reply": "Please upload a CSV file first before asking questions."})
+        return jsonify({"reply": "Please upload a CSV file first."})
 
     user_message = request.json.get('message', '')
-    if not user_message:
-        return jsonify({"reply": "Please enter a question."})
-
     try:
         real_stats = df_cleaned.describe(include='all').to_string()
-        sample_data = df_cleaned.head(10).to_string()
-        columns = list(df_cleaned.columns)
-        shape = df_cleaned.shape
-
-        system_prompt = f"""You are an AI Data Analyst chatbot for the Universal DataFlow System.
-
-Dataset Info: {shape[0]} rows, {shape[1]} columns.
-Columns: {columns}
-
-Cleaning Operations Performed:
-1. Removed all duplicate rows.
-2. Handled missing values (Nulls):
-   - Numeric columns: Filled with Median value.
-   - Text/Categorical columns: Filled with Mode or 'Unknown'.
-
-Real Statistics after cleaning:
-{real_stats}
-
-Sample Data:
-{sample_data}
-
-Rules:
-- Answer ONLY based on the provided data.
-- Respond in the SAME LANGUAGE as the user (Arabic, English, or German).
-- If asked about cleaning, explain the operations listed above.
-- Be concise and clear.
-"""
+        system_prompt = f"""You are an AI Analyst for the Universal DataFlow System.
+        Dataset: {df_cleaned.shape[0]} rows, {df_cleaned.shape[1]} columns.
+        Stats: {real_stats}
+        Rules: Respond in the user's language (Arabic, English, or German). Be data-driven."""
 
         response = client.chat.completions.create(
             messages=[
@@ -248,15 +180,34 @@ Rules:
             ],
             model="llama-3.1-8b-instant",
         )
-
-        reply = response.choices[0].message.content
-        return jsonify({"reply": reply})
-
+        return jsonify({"reply": response.choices[0].message.content})
     except Exception as e:
-        return jsonify({"reply": f"Error: {str(e)}"})
+        return jsonify({"reply": f"AI Error: {str(e)}"})
 
-@app.route('/download', methods=['GET'])
-def download_file():
+# NEW: Route for CSV Download as requested
+@app.route('/download_csv', methods=['GET'])
+def download_csv():
+    global df_cleaned
+    if df_cleaned is None:
+        return render_template('index.html', message="No data available to download.")
+
+    output = io.StringIO()
+    df_cleaned.to_csv(output, index=False)
+    
+    mem = io.BytesIO()
+    mem.write(output.getvalue().encode('utf-8'))
+    mem.seek(0)
+    
+    return send_file(
+        mem,
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name='Cleaned_Data_Universal.csv'
+    )
+
+# Keeping Excel download option as well
+@app.route('/download_excel', methods=['GET'])
+def download_excel():
     global df_cleaned
     if df_cleaned is None:
         return render_template('index.html', message="No data available")
@@ -270,7 +221,7 @@ def download_file():
         output,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
-        download_name='Universal_DataFlow_Final.xlsx'
+        download_name='Cleaned_Data_Universal.xlsx'
     )
 
 if __name__ == '__main__':
