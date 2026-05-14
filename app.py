@@ -15,10 +15,8 @@ client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 df_cleaned = None
 
-
 def generate_charts(df):
     charts = []
-
     try:
         nulls = df.isnull().sum()
         nulls = nulls[nulls > 0]
@@ -100,7 +98,6 @@ def generate_charts(df):
 
     return charts
 
-
 def fig_to_base64(fig):
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=120)
@@ -109,16 +106,13 @@ def fig_to_base64(fig):
     buf.close()
     return f"data:image/png;base64,{encoded}"
 
-
 @app.route('/')
 def home():
     return render_template('index.html')
 
-
 @app.route('/process', methods=['POST'])
 def process_data():
     global df_cleaned
-
     if 'file' not in request.files:
         return render_template('index.html', message="No file uploaded")
 
@@ -128,7 +122,6 @@ def process_data():
 
     try:
         df = pd.read_csv(file)
-
         initial_stats = {
             "rows": len(df),
             "columns": list(df.columns),
@@ -154,8 +147,11 @@ def process_data():
         final_stats = {"rows": len(df_cleaned)}
         real_stats = df_cleaned.describe(include='all').to_string()
 
+        # Modified prompt to support Arabic in the AI Report
         prompt = f"""
-Generate a professional AI Data Analysis Report in English.
+Generate a professional AI Data Analysis Report.
+The report should be in Arabic if possible, or the same language as the dataset context.
+
 Use ONLY the following real data statistics, do not invent any numbers:
 
 Real Data Statistics:
@@ -171,14 +167,14 @@ Summary:
 Rules:
 - Use ONLY the numbers from the real statistics above
 - Do NOT invent or assume any values
-- Provide output in clean English bullet points
+- Provide output in clean bullet points
 """
 
         response = client.chat.completions.create(
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an AI Data Analyst. Provide reports only in English. Use ONLY the data provided, never invent numbers."
+                    "content": "You are an AI Data Analyst. Provide reports in Arabic or English based on context. Use ONLY the data provided, never invent numbers."
                 },
                 {
                     "role": "user",
@@ -206,7 +202,6 @@ Rules:
     except Exception as e:
         return render_template('index.html', message=f"Error: {str(e)}")
 
-
 @app.route('/chat', methods=['POST'])
 def chat():
     global df_cleaned
@@ -224,24 +219,30 @@ def chat():
         columns = list(df_cleaned.columns)
         shape = df_cleaned.shape
 
-        system_prompt = f"""You are an AI Data Analyst chatbot. 
-You have access to the following dataset information:
+        # System Prompt modified for Arabic support and Cleaning Context
+        system_prompt = f"""You are an AI Data Analyst chatbot for the Universal DataFlow System.
 
-Dataset Shape: {shape[0]} rows, {shape[1]} columns
+Dataset Info: {shape[0]} rows, {shape[1]} columns.
 Columns: {columns}
 
-Real Statistics:
+Cleaning Operations Performed:
+1. Removed all duplicate rows.
+2. Handled missing values (Nulls):
+   - Numeric columns: Filled with Median value.
+   - Text/Categorical columns: Filled with Mode or 'Unknown'.
+
+Real Statistics after cleaning:
 {real_stats}
 
-Sample Data (first 10 rows):
+Sample Data:
 {sample_data}
 
 Rules:
-- Answer ONLY based on the real data provided above
-- Do NOT invent or assume any values
-- Be concise and clear
-- Always respond in English
-- If asked about something not in the data, say you don't have that information"""
+- Answer ONLY based on the provided data.
+- Respond in the SAME LANGUAGE as the user (Arabic or English).
+- If asked about cleaning, explain the operations listed above.
+- Be concise and clear.
+"""
 
         response = client.chat.completions.create(
             messages=[
@@ -257,11 +258,9 @@ Rules:
     except Exception as e:
         return jsonify({"reply": f"Error: {str(e)}"})
 
-
 @app.route('/download', methods=['GET'])
 def download_file():
     global df_cleaned
-
     if df_cleaned is None:
         return render_template('index.html', message="No data available")
 
@@ -276,7 +275,6 @@ def download_file():
         as_attachment=True,
         download_name='Universal_DataFlow_Final.xlsx'
     )
-
 
 if __name__ == '__main__':
     app.run(debug=True)
