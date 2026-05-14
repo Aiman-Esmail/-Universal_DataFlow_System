@@ -8,145 +8,402 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from flask import Flask, render_template, request, send_file, jsonify
 from groq import Groq
-from fpdf import FPDF
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib import colors
 
 app = Flask(__name__)
 
-# Initialize Groq Client
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# Global variables
+df_original = None
 df_cleaned = None
-latest_ai_report = ""
+latest_ai_report = "No report generated yet."
+latest_viz_report = "No visualization report yet."
+
 
 def fig_to_base64(fig):
     buf = io.BytesIO()
-    fig.savefig(buf, format='png', dpi=120)
+    fig.savefig(buf, format='png', dpi=120, bbox_inches='tight')
     buf.seek(0)
     encoded = base64.b64encode(buf.read()).decode('utf-8')
     buf.close()
     return f"data:image/png;base64,{encoded}"
 
+
 def generate_charts(df):
     charts = []
+
+    # Chart 1: Missing Values
     try:
-        # Missing Values
         nulls = df.isnull().sum()
         nulls = nulls[nulls > 0]
         if not nulls.empty:
             fig, ax = plt.subplots(figsize=(10, 5))
             nulls.plot(kind='bar', ax=ax, color='tomato')
-            ax.set_title('Missing Values Report')
+            ax.set_title('Missing Values per Column')
+            ax.set_xlabel('Columns')
+            ax.set_ylabel('Count')
             plt.tight_layout()
-            charts.append(fig_to_base64(fig))
+            charts.append(('Missing Values', fig_to_base64(fig)))
             plt.close(fig)
-            
-        # Correlation
+    except Exception:
+        pass
+
+    # Chart 2: Distributions
+    try:
+        numeric_cols = df.select_dtypes(include='number').columns[:4]
+        if len(numeric_cols) > 0:
+            fig, axes = plt.subplots(1, len(numeric_cols), figsize=(5 * len(numeric_cols), 4))
+            if len(numeric_cols) == 1:
+                axes = [axes]
+            for ax, col in zip(axes, numeric_cols):
+                df[col].dropna().hist(ax=ax, bins=20, color='steelblue', edgecolor='white')
+                ax.set_title(f'Distribution: {col}')
+                ax.set_xlabel(col)
+                ax.set_ylabel('Frequency')
+            plt.tight_layout()
+            charts.append(('Distributions', fig_to_base64(fig)))
+            plt.close(fig)
+    except Exception:
+        pass
+
+    # Chart 3: Correlation Heatmap
+    try:
         numeric_df = df.select_dtypes(include='number')
         if numeric_df.shape[1] >= 2:
-            fig, ax = plt.subplots(figsize=(10, 8))
-            sns.heatmap(numeric_df.corr(), annot=True, cmap='coolwarm', ax=ax)
-            ax.set_title('Correlation Matrix')
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.heatmap(
+                numeric_df.corr(),
+                annot=True,
+                fmt='.2f',
+                cmap='coolwarm',
+                ax=ax,
+                linewidths=0.5
+            )
+            ax.set_title('Correlation Heatmap')
             plt.tight_layout()
-            charts.append(fig_to_base64(fig))
+            charts.append(('Correlation Heatmap', fig_to_base64(fig)))
             plt.close(fig)
-    except: pass
+    except Exception:
+        pass
+
+    # Chart 4: Categorical Top 5
+    try:
+        cat_cols = df.select_dtypes(include='object').columns[:2]
+        for col in cat_cols:
+            fig, ax = plt.subplots(figsize=(8, 4))
+            df[col].value_counts().head(5).plot(
+                kind='bar', ax=ax, color='mediumseagreen', edgecolor='white'
+            )
+            ax.set_title(f'Top 5 Values: {col}')
+            ax.set_xlabel(col)
+            ax.set_ylabel('Count')
+            plt.tight_layout()
+            charts.append((f'Top Values: {col}', fig_to_base64(fig)))
+            plt.close(fig)
+    except Exception:
+        pass
+
+    # Chart 5: Boxplot
+    try:
+        numeric_cols = df.select_dtypes(include='number').columns[:4]
+        if len(numeric_cols) > 0:
+            fig, ax = plt.subplots(figsize=(10, 5))
+            df[numeric_cols].boxplot(ax=ax)
+            ax.set_title('Boxplot - Outlier Detection')
+            plt.tight_layout()
+            charts.append(('Boxplot', fig_to_base64(fig)))
+            plt.close(fig)
+    except Exception:
+        pass
+
     return charts
+
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
+
 @app.route('/process', methods=['POST'])
 def process_data():
-    global df_cleaned, latest_ai_report
+    global df_original, df_cleaned, latest_ai_report, latest_viz_report
+
     if 'file' not in request.files:
         return render_template('index.html', message="No file uploaded")
 
     file = request.files['file']
+    if file.filename == '':
+        return render_template('index.html', message="No file selected")
+
     try:
-        df = pd.read_csv(file)
-        initial_rows = len(df)
-        initial_dupes = int(df.duplicated().sum())
-        
-        # Preprocessing
-        df_cleaned = df.drop_duplicates().copy()
+        df_original = pd.read_csv(file)
+
+        initial_stats = {
+            "rows": len(df_original),
+            "columns": list(df_original.columns),
+            "nulls": df_original.isnull().sum().to_dict(),
+            "duplicates": int(df_original.duplicated().sum())
+        }
+
+        df_cleaned = df_original.drop_duplicates().copy()
+
+        preprocessing_log = []
         for col in df_cleaned.columns:
             if df_cleaned[col].dtype == 'object':
-                df_cleaned[col] = df_cleaned[col].fillna(df_cleaned[col].mode()[0] if not df_cleaned[col].mode().empty else "N/A")
+                mode_val = df_cleaned[col].mode()
+                fill_val = mode_val[0] if not mode_val.empty else "Unknown"
+                nulls_count = df_cleaned[col].isnull().sum()
+                if nulls_count > 0:
+                    preprocessing_log.append(f"Column '{col}': filled {nulls_count} nulls with mode '{fill_val}'")
+                df_cleaned[col] = df_cleaned[col].fillna(fill_val)
+            elif pd.api.types.is_numeric_dtype(df_cleaned[col]):
+                med_val = df_cleaned[col].median()
+                nulls_count = df_cleaned[col].isnull().sum()
+                if nulls_count > 0:
+                    preprocessing_log.append(f"Column '{col}': filled {nulls_count} nulls with median {med_val:.2f}")
+                df_cleaned[col] = df_cleaned[col].fillna(med_val)
             else:
-                df_cleaned[col] = df_cleaned[col].fillna(df_cleaned[col].median())
+                df_cleaned[col] = df_cleaned[col].fillna("Unknown")
 
-        stats_summary = df_cleaned.describe(include='all').to_string()
+        final_stats = {"rows": len(df_cleaned)}
+        real_stats = df_cleaned.describe(include='all').to_string()
 
-        prompt = f"Generate a professional Data Analysis Report for a dataset with {len(df_cleaned)} rows. Summarize preprocessing and key insights in English bullet points. Data stats: {stats_summary}"
+        # AI Preprocessing Report
+        preprocessing_prompt = f"""
+Generate a professional Data Preprocessing Report in English.
+Use ONLY the following real data, do not invent numbers.
+
+Initial rows: {initial_stats['rows']}
+Final rows after cleaning: {final_stats['rows']}
+Duplicates removed: {initial_stats['duplicates']}
+Nulls per column before cleaning: {initial_stats['nulls']}
+Columns: {initial_stats['columns']}
+Preprocessing actions taken: {preprocessing_log}
+
+Real Statistics after cleaning:
+{real_stats}
+
+Provide:
+1. Data Overview
+2. Preprocessing Steps Applied
+3. Data Quality Assessment
+4. Key Findings
+Use clean English bullet points only.
+"""
 
         response = client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "You are a professional Data Analyst. Report in English."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "You are an AI Data Analyst. Use ONLY the data provided, never invent numbers."},
+                {"role": "user", "content": preprocessing_prompt}
             ],
             model="llama-3.1-8b-instant",
         )
-
         latest_ai_report = response.choices[0].message.content
-        charts = generate_charts(df_cleaned)
-        table_html = df_cleaned.head(10).to_html(classes='table table-striped', index=False)
 
-        return render_template('index.html', ai_response=latest_ai_report, tables=[table_html], charts=charts, message="Success!")
+        # AI Visualization Report
+        viz_prompt = f"""
+Generate a professional Data Visualization Report in English.
+Based on this real dataset statistics:
+
+{real_stats}
+
+Columns: {initial_stats['columns']}
+
+Explain what the following charts would show about the data:
+1. Distribution charts for numeric columns
+2. Correlation heatmap between numeric columns
+3. Top values for categorical columns
+4. Boxplot for outlier detection
+
+Use ONLY real statistics provided. Clean English bullet points.
+"""
+
+        viz_response = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": "You are an AI Data Visualization Expert. Use ONLY the data provided."},
+                {"role": "user", "content": viz_prompt}
+            ],
+            model="llama-3.1-8b-instant",
+        )
+        latest_viz_report = viz_response.choices[0].message.content
+
+        charts = generate_charts(df_cleaned)
+        preview_table = df_cleaned.head(10).to_html(
+            classes='table table-hover table-bordered',
+            index=True
+        )
+
+        return render_template(
+            'index.html',
+            message="Data Processed Successfully!",
+            ai_response=latest_ai_report,
+            viz_response=latest_viz_report,
+            tables=[preview_table],
+            charts=charts,
+            initial_rows=initial_stats['rows'],
+            final_rows=final_stats['rows'],
+            duplicates=initial_stats['duplicates'],
+            columns=initial_stats['columns'],
+            preprocessing_log=preprocessing_log
+        )
+
     except Exception as e:
         return render_template('index.html', message=f"Error: {str(e)}")
+
 
 @app.route('/chat', methods=['POST'])
 def chat():
     global df_cleaned
-    if df_cleaned is None: return jsonify({"reply": "Upload data first."})
-    user_msg = request.json.get('message', '')
-    
-    system_instruction = f"""You are a STRICT Data Science Assistant. 
-    1. ONLY answer data-related questions. 
-    2. If asked about food/recipes/anything else, say: 'I am a Data Analyst. I cannot answer non-data related questions.'"""
+
+    if df_cleaned is None:
+        return jsonify({"reply": "Please upload a CSV file first."})
+
+    user_message = request.json.get('message', '')
+    if not user_message:
+        return jsonify({"reply": "Please enter a question."})
 
     try:
+        real_stats = df_cleaned.describe(include='all').to_string()
+        sample_data = df_cleaned.head(10).to_string()
+
+        system_prompt = f"""You are an AI Data Analyst chatbot.
+Dataset Shape: {df_cleaned.shape[0]} rows, {df_cleaned.shape[1]} columns
+Columns: {list(df_cleaned.columns)}
+
+Real Statistics:
+{real_stats}
+
+Sample Data:
+{sample_data}
+
+Rules:
+- Answer ONLY based on real data above
+- Do NOT invent values
+- Be concise and clear
+- Always respond in English"""
+
         response = client.chat.completions.create(
-            messages=[{"role": "system", "content": system_instruction}, {"role": "user", "content": user_msg}],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
             model="llama-3.1-8b-instant",
         )
         return jsonify({"reply": response.choices[0].message.content})
+
     except Exception as e:
-        return jsonify({"reply": f"AI Error: {str(e)}"})
+        return jsonify({"reply": f"Error: {str(e)}"})
 
-# --- NEW: PDF REPORT GENERATION ---
-@app.route('/download_pdf')
-def download_pdf():
-    global latest_ai_report, df_cleaned
-    if df_cleaned is None: return "No data"
 
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, txt="Universal DataFlow - Analysis Report", ln=True, align='C')
-    
-    pdf.set_font("Arial", size=12)
-    pdf.ln(10)
-    pdf.multi_cell(0, 10, txt=latest_ai_report.encode('latin-1', 'replace').decode('latin-1'))
-    
-    pdf_output = io.BytesIO()
-    pdf_str = pdf.output(dest='S').encode('latin-1')
-    pdf_output.write(pdf_str)
-    pdf_output.seek(0)
-    
-    return send_file(pdf_output, mimetype='application/pdf', as_attachment=True, download_name='Analysis_Report.pdf')
-
-@app.route('/download_csv')
+@app.route('/download_csv', methods=['GET'])
 def download_csv():
     global df_cleaned
+    if df_cleaned is None:
+        return render_template('index.html', message="No data available")
+
     output = io.StringIO()
     df_cleaned.to_csv(output, index=False)
-    mem = io.BytesIO()
-    mem.write(output.getvalue().encode('utf-8'))
-    mem.seek(0)
-    return send_file(mem, mimetype='text/csv', as_attachment=True, download_name='Cleaned_Data.csv')
+    output.seek(0)
+    return send_file(
+        io.BytesIO(output.getvalue().encode()),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name='Cleaned_Data.csv'
+    )
+
+
+@app.route('/download_excel', methods=['GET'])
+def download_excel():
+    global df_cleaned
+    if df_cleaned is None:
+        return render_template('index.html', message="No data available")
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_cleaned.to_excel(writer, index=False, sheet_name='Cleaned_Data')
+
+    output.seek(0)
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='Cleaned_Data.xlsx'
+    )
+
+
+@app.route('/download_pdf', methods=['GET'])
+def download_pdf():
+    global df_cleaned, latest_ai_report, latest_viz_report
+
+    if df_cleaned is None:
+        return render_template('index.html', message="No data available")
+
+    try:
+        output = io.BytesIO()
+        doc = SimpleDocTemplate(output, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
+
+        # Title
+        story.append(Paragraph("Universal DataFlow System - Full Report", styles['Title']))
+        story.append(Spacer(1, 20))
+
+        # Preprocessing Report
+        story.append(Paragraph("Preprocessing Report", styles['Heading1']))
+        story.append(Spacer(1, 10))
+        for line in latest_ai_report.split('\n'):
+            if line.strip():
+                story.append(Paragraph(line.strip(), styles['Normal']))
+                story.append(Spacer(1, 5))
+
+        story.append(Spacer(1, 20))
+
+        # Visualization Report
+        story.append(Paragraph("Visualization Report", styles['Heading1']))
+        story.append(Spacer(1, 10))
+        for line in latest_viz_report.split('\n'):
+            if line.strip():
+                story.append(Paragraph(line.strip(), styles['Normal']))
+                story.append(Spacer(1, 5))
+
+        story.append(Spacer(1, 20))
+
+        # Data Statistics Table
+        story.append(Paragraph("Data Statistics Summary", styles['Heading1']))
+        story.append(Spacer(1, 10))
+
+        stats_df = df_cleaned.describe(include='all').reset_index()
+        table_data = [list(stats_df.columns)]
+        for _, row in stats_df.iterrows():
+            table_data.append([str(round(v, 2)) if isinstance(v, float) else str(v) for v in row])
+
+        t = Table(table_data)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
+        ]))
+        story.append(t)
+
+        doc.build(story)
+        output.seek(0)
+
+        return send_file(
+            output,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name='DataFlow_Full_Report.pdf'
+        )
+
+    except Exception as e:
+        return f"PDF Error: {str(e)}"
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)

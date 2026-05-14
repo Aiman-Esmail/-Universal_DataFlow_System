@@ -3,136 +3,332 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal DataFlow System 2026</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Universal DataFlow System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .navbar { background: #2c3e50; color: white; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .card-header { background: #34495e; color: white; border-radius: 15px 15px 0 0 !important; font-weight: bold; }
-        .btn-custom { border-radius: 25px; padding: 10px 25px; transition: all 0.3s; }
-        .btn-download { background-color: #27ae60; color: white; }
-        .btn-download:hover { background-color: #219150; color: white; transform: translateY(-2px); }
-        .btn-pdf { background-color: #e74c3c; color: white; }
-        .btn-pdf:hover { background-color: #c0392b; color: white; transform: translateY(-2px); }
-        #chat-box { height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; background: #fff; border-radius: 10px; }
-        .ai-msg { background: #e8f4fd; padding: 10px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #3498db; }
-        .user-msg { background: #f0f0f0; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: right; border-right: 4px solid #95a5a6; }
-        .chart-img { max-width: 100%; height: auto; border-radius: 10px; margin-bottom: 20px; border: 1px solid #eee; }
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+        .hero {
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: white; padding: 50px 30px; border-radius: 16px; margin-bottom: 30px; text-align: center;
+        }
+        .hero h1 { font-size: 2.5rem; font-weight: 700; }
+        .hero p { color: #a0aec0; }
+        .card-custom {
+            background: white; border-radius: 16px; padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 25px;
+        }
+        .section-title {
+            font-size: 1.4rem; font-weight: 700; color: #1a1a2e;
+            border-left: 4px solid #667eea; padding-left: 12px; margin-bottom: 20px;
+        }
+        .upload-area {
+            border: 2px dashed #cbd5e0; border-radius: 12px; padding: 30px;
+            text-align: center; background: #f7fafc; transition: 0.3s;
+        }
+        .upload-area:hover { border-color: #4299e1; background: #ebf8ff; }
+        .upload-area input[type="file"] { display: none; }
+        .upload-label { cursor: pointer; display: block; }
+        .upload-icon { font-size: 3rem; margin-bottom: 10px; }
+        .btn-process {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border: none; padding: 12px 35px; border-radius: 10px;
+            font-size: 1rem; font-weight: 600; width: 100%; margin-top: 15px; transition: 0.3s;
+        }
+        .btn-process:hover { opacity: 0.9; transform: translateY(-1px); color: white; }
+        .btn-download {
+            color: white; border: none; padding: 10px 20px; border-radius: 10px;
+            font-size: 0.9rem; font-weight: 600; text-decoration: none;
+            display: inline-block; margin: 5px; transition: 0.3s;
+        }
+        .btn-csv { background: linear-gradient(135deg, #38a169, #2f855a); }
+        .btn-excel { background: linear-gradient(135deg, #3182ce, #2b6cb0); }
+        .btn-pdf { background: linear-gradient(135deg, #e53e3e, #c53030); }
+        .btn-download:hover { opacity: 0.9; transform: translateY(-1px); color: white; }
+        .ai-report {
+            background: #1a1a2e; color: #e2e8f0; border-radius: 12px;
+            padding: 25px; font-size: 0.95rem; line-height: 1.8; white-space: pre-wrap;
+        }
+        .table-wrapper { overflow-x: auto; border-radius: 10px; }
+        .table { font-size: 0.9rem; }
+        .table thead { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .chart-img {
+            border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%; transition: 0.3s;
+        }
+        .chart-img:hover { transform: scale(1.02); }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 15px;
+        }
+        .stat-card h3 { font-size: 2rem; font-weight: 700; margin: 0; }
+        .stat-card p { margin: 0; opacity: 0.85; font-size: 0.9rem; }
+        .loading { display: none; text-align: center; padding: 20px; }
+        .spinner-border { width: 3rem; height: 3rem; color: #667eea; }
+        .file-name { margin-top: 10px; font-size: 0.9rem; color: #4a5568; font-weight: 500; }
+        .log-item {
+            background: #f0fff4; border-left: 4px solid #38a169;
+            padding: 8px 14px; border-radius: 6px; margin-bottom: 8px;
+            font-size: 0.88rem; color: #276749;
+        }
+        .nav-tabs .nav-link { color: #4a5568; font-weight: 600; }
+        .nav-tabs .nav-link.active { color: #667eea; border-bottom: 3px solid #667eea; }
+        .chat-container {
+            height: 400px; overflow-y: auto; background: #f7fafc;
+            border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid #e2e8f0;
+        }
+        .chat-bubble {
+            max-width: 80%; padding: 12px 18px; border-radius: 18px;
+            margin-bottom: 12px; font-size: 0.92rem; line-height: 1.6; word-wrap: break-word;
+        }
+        .chat-bubble.user {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; margin-left: auto; border-bottom-right-radius: 4px;
+        }
+        .chat-bubble.bot {
+            background: #1a1a2e; color: #e2e8f0;
+            margin-right: auto; border-bottom-left-radius: 4px;
+        }
+        .chat-input-area { display: flex; gap: 10px; }
+        .chat-input {
+            flex: 1; border-radius: 10px; border: 1px solid #cbd5e0;
+            padding: 12px 16px; font-size: 0.95rem; outline: none; transition: 0.3s;
+        }
+        .chat-input:focus { border-color: #667eea; }
+        .btn-send {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border: none; padding: 12px 24px;
+            border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.3s;
+        }
+        .btn-send:hover { opacity: 0.9; }
+        .suggestion-btn {
+            background: #ebf4ff; color: #3182ce; border: 1px solid #bee3f8;
+            border-radius: 20px; padding: 6px 14px; font-size: 0.82rem;
+            cursor: pointer; transition: 0.3s; margin: 3px;
+        }
+        .suggestion-btn:hover { background: #3182ce; color: white; }
+        .chart-title {
+            font-weight: 600; color: #1a1a2e; text-align: center;
+            margin-bottom: 8px; font-size: 0.95rem;
+        }
     </style>
 </head>
 <body>
+<div class="container py-5">
 
-<nav class="navbar">
-    <div class="container">
-        <span class="navbar-brand mb-0 h1"><i class="fas fa-database me-2"></i> Universal DataFlow System © 2026</span>
+    <!-- Hero -->
+    <div class="hero">
+        <div class="upload-icon">🤖</div>
+        <h1>Universal DataFlow System</h1>
+        <p>AI-Powered Preprocessing, Visualization & Analysis</p>
     </div>
-</nav>
 
-<div class="container">
-    <!-- Upload Section -->
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header"><i class="fas fa-upload me-2"></i> Upload & Process Data</div>
-                <div class="card-body text-center">
-                    <form action="/process" method="post" enctype="multipart/form-data" class="row g-3 justify-content-center">
-                        <div class="col-auto">
-                            <input type="file" name="file" class="form-control" accept=".csv" required>
-                        </div>
-                        <div class="col-auto">
-                            <button type="submit" class="btn btn-primary btn-custom"><i class="fas fa-sync me-2"></i> Process Dataset</button>
-                        </div>
-                    </form>
-                    {% if message %}
-                    <div class="alert alert-info mt-3">{{ message }}</div>
-                    {% endif %}
-                </div>
+    <!-- Upload -->
+    <div class="card-custom">
+        <div class="section-title">📂 Upload Your CSV File</div>
+        <form action="/process" method="POST" enctype="multipart/form-data" id="uploadForm">
+            <div class="upload-area">
+                <label class="upload-label" for="fileInput">
+                    <div class="upload-icon">📊</div>
+                    <div><strong>Click to choose a CSV file</strong></div>
+                    <div style="color:#a0aec0; font-size:0.9rem;">Supports .csv files only</div>
+                </label>
+                <input type="file" id="fileInput" name="file" accept=".csv" onchange="showFileName(this)">
+            </div>
+            <div class="file-name" id="fileName"></div>
+            <button type="submit" class="btn btn-process" onclick="showLoading()">
+                ⚡ Process & Analyze Data
+            </button>
+        </form>
+        <div class="loading" id="loading">
+            <div class="spinner-border" role="status"></div>
+            <div class="mt-3" style="color:#667eea; font-weight:600;">AI is analyzing your data...</div>
+        </div>
+    </div>
+
+    <!-- Message -->
+    {% if message %}
+    <div class="alert alert-custom mt-2
+        {% if 'Error' in message %} alert-danger
+        {% elif 'Success' in message %} alert-success
+        {% else %} alert-info {% endif %}">
+        {% if 'Error' in message %}❌{% elif 'Success' in message %}✅{% else %}ℹ️{% endif %}
+        {{ message }}
+    </div>
+    {% endif %}
+
+    {% if tables %}
+
+    <!-- Stats Cards -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <h3>{{ initial_rows }}</h3>
+                <p>Initial Rows</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <h3>{{ final_rows }}</h3>
+                <p>Rows After Cleaning</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <h3>{{ duplicates }}</h3>
+                <p>Duplicates Removed</p>
             </div>
         </div>
     </div>
 
-    {% if ai_response %}
-    <div class="row">
-        <!-- AI Report & Downloads -->
-        <div class="col-md-7">
-            <div class="card">
-                <div class="card-header"><i class="fas fa-file-alt me-2"></i> Full Analysis Report</div>
-                <div class="card-body">
-                    <div class="mb-4">{{ ai_response | safe }}</div>
-                    
-                    <hr>
-                    <h5><i class="fas fa-download me-2"></i> Export Results</h5>
-                    <div class="d-flex gap-2">
-                        <a href="/download_csv" class="btn btn-download btn-custom"><i class="fas fa-file-csv me-2"></i> Download Cleaned CSV</a>
-                        <a href="/download_pdf" class="btn btn-pdf btn-custom"><i class="fas fa-file-pdf me-2"></i> Download PDF Report</a>
-                    </div>
-                </div>
+    <!-- Tabs -->
+    <div class="card-custom">
+        <ul class="nav nav-tabs mb-4" id="mainTabs">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#preprocessingTab">
+                    🔧 Preprocessing Report
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#vizTab">
+                    📊 Visualization Report
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#dataTab">
+                    📋 Data Preview
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#chatTab">
+                    💬 AI Chatbot
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+
+            <!-- Preprocessing Tab -->
+            <div class="tab-pane fade show active" id="preprocessingTab">
+                <h5 class="mb-3">🔧 Preprocessing Steps Applied:</h5>
+                {% if preprocessing_log %}
+                    {% for log in preprocessing_log %}
+                    <div class="log-item">✅ {{ log }}</div>
+                    {% endfor %}
+                {% else %}
+                    <div class="log-item">✅ No missing values found — data is clean!</div>
+                {% endif %}
+                <h5 class="mt-4 mb-3">🧠 AI Preprocessing Analysis:</h5>
+                <div class="ai-report">{{ ai_response }}</div>
             </div>
 
-            <!-- Data Preview -->
-            <div class="card">
-                <div class="card-header"><i class="fas fa-table me-2"></i> Data Preview (First 10 Rows)</div>
-                <div class="card-body" style="overflow-x: auto;">
-                    {% for table in tables %}
-                        {{ table | safe }}
+            <!-- Visualization Tab -->
+            <div class="tab-pane fade" id="vizTab">
+                <h5 class="mb-3">🧠 AI Visualization Analysis:</h5>
+                <div class="ai-report mb-4">{{ viz_response }}</div>
+                <h5 class="mb-3">📊 Charts:</h5>
+                <div class="row">
+                    {% for title, chart in charts %}
+                    <div class="col-md-6 mb-4">
+                        <div class="chart-title">{{ title }}</div>
+                        <img src="{{ chart }}" class="chart-img" alt="{{ title }}">
+                    </div>
                     {% endfor %}
                 </div>
             </div>
-        </div>
 
-        <!-- Visualizations & Chat -->
-        <div class="col-md-5">
-            <div class="card">
-                <div class="card-header"><i class="fas fa-chart-pie me-2"></i> Visualisation Report</div>
-                <div class="card-body text-center">
-                    {% for chart in charts %}
-                        <img src="{{ chart }}" class="chart-img" alt="Analysis Chart">
-                    {% endfor %}
+            <!-- Data Preview Tab -->
+            <div class="tab-pane fade" id="dataTab">
+                <h5 class="mb-3">📋 Cleaned Data Preview (First 10 Rows):</h5>
+                <div class="table-wrapper">{{ tables[0] | safe }}</div>
+                <div class="mt-4">
+                    <h5>⬇️ Download Cleaned Data:</h5>
+                    <a href="/download_csv" class="btn-download btn-csv">📄 Download CSV</a>
+                    <a href="/download_excel" class="btn-download btn-excel">📊 Download Excel</a>
+                    <a href="/download_pdf" class="btn-download btn-pdf">📑 Download Full PDF Report</a>
                 </div>
             </div>
 
-            <!-- Chat Interface -->
-            <div class="card">
-                <div class="card-header"><i class="fas fa-robot me-2"></i> Ask About Your Data</div>
-                <div class="card-body">
-                    <div id="chat-box" class="mb-3"></div>
-                    <div class="input-group">
-                        <input type="text" id="user-input" class="form-control" placeholder="Ask in Arabic, English, or German...">
-                        <button class="btn btn-dark" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+            <!-- Chatbot Tab -->
+            <div class="tab-pane fade" id="chatTab">
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:15px;">
+                    <button class="suggestion-btn" onclick="sendSuggestion('What are the column names?')">📋 Columns</button>
+                    <button class="suggestion-btn" onclick="sendSuggestion('What is the average of each numeric column?')">📊 Averages</button>
+                    <button class="suggestion-btn" onclick="sendSuggestion('What are the max and min values?')">📈 Max & Min</button>
+                    <button class="suggestion-btn" onclick="sendSuggestion('Are there any outliers?')">🔍 Outliers</button>
+                    <button class="suggestion-btn" onclick="sendSuggestion('Summarize the dataset')">📝 Summary</button>
+                    <button class="suggestion-btn" onclick="sendSuggestion('Which column has most missing values?')">❓ Missing Values</button>
+                    <button class="suggestion-btn" onclick="sendSuggestion('What are the correlations between columns?')">🔗 Correlations</button>
+                </div>
+                <div class="chat-container" id="chatContainer">
+                    <div class="chat-bubble bot">
+                        👋 Hello! I have full access to your dataset. Ask me anything about your data!
                     </div>
                 </div>
+                <div class="chat-input-area">
+                    <input type="text" class="chat-input" id="chatInput"
+                        placeholder="Ask anything about your data..."
+                        onkeypress="handleKey(event)">
+                    <button class="btn-send" onclick="sendMessage()">Send ➤</button>
+                </div>
             </div>
+
         </div>
     </div>
     {% endif %}
+
+    <!-- Footer -->
+    <div class="text-center mt-4" style="color:#a0aec0; font-size:0.85rem;">
+        Universal DataFlow System &copy; 2026 — Powered by AI & Flask
+    </div>
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    function showFileName(input) {
+        const name = input.files[0] ? input.files[0].name : '';
+        document.getElementById('fileName').textContent = name ? '📄 Selected: ' + name : '';
+    }
+    function showLoading() {
+        if (document.getElementById('fileInput').files[0]) {
+            document.getElementById('loading').style.display = 'block';
+        }
+    }
+    function handleKey(e) { if (e.key === 'Enter') sendMessage(); }
+    function sendSuggestion(text) {
+        document.getElementById('chatInput').value = text;
+        sendMessage();
+    }
     async function sendMessage() {
-        const input = document.getElementById('user-input');
-        const box = document.getElementById('chat-box');
-        if (!input.value) return;
-
-        box.innerHTML += `<div class="user-msg"><b>You:</b> ${input.value}</div>`;
-        const userMsg = input.value;
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        if (!message) return;
+        appendMessage(message, 'user');
         input.value = '';
-
+        const typing = appendMessage('⏳ Thinking...', 'bot');
         try {
             const response = await fetch('/chat', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message: userMsg})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
             });
             const data = await response.json();
-            box.innerHTML += `<div class="ai-msg"><b>AI:</b> ${data.reply}</div>`;
-            box.scrollTop = box.scrollHeight;
-        } catch (e) {
-            box.innerHTML += `<div class="ai-msg text-danger"><b>Error:</b> Could not connect to AI.</div>`;
+            typing.remove();
+            appendMessage(data.reply, 'bot');
+        } catch {
+            typing.remove();
+            appendMessage('❌ Error. Please try again.', 'bot');
         }
     }
+    function appendMessage(text, type) {
+        const container = document.getElementById('chatContainer');
+        const bubble = document.createElement('div');
+        bubble.className = `chat-bubble ${type}`;
+        bubble.textContent = text;
+        container.appendChild(bubble);
+        container.scrollTop = container.scrollHeight;
+        return bubble;
+    }
 </script>
-
 </body>
 </html>
