@@ -129,7 +129,7 @@ def download_pdf():
     except Exception as e:
         return f"PDF Error: {str(e)}"
 
-# MANDATORY: Fix for Render Port Binding
+# MANDATORY: This section solves the "Port scan timeout" error
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", 10000)) # Render provides a port dynamically
     app.run(host='0.0.0.0', port=port)
