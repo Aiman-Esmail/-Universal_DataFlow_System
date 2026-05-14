@@ -253,7 +253,7 @@ def chat():
     global df_cleaned
 
     if df_cleaned is None:
-        return jsonify({"reply": "Please upload a CSV file first."})
+        return jsonify({"reply": "Please upload a CSV file first before asking questions."})
 
     user_message = request.json.get('message', '')
     if not user_message:
@@ -263,18 +263,26 @@ def chat():
         real_stats = df_cleaned.describe(include='all').to_string()
         sample_data = df_cleaned.head(5).to_string()
 
-        system_prompt = f"""You are an AI Data Analyst chatbot.
+        system_prompt = f"""You are a strict Data Analysis Assistant.
+Your ONLY job is to answer questions about the uploaded dataset.
+
 Dataset: {df_cleaned.shape[0]} rows, {df_cleaned.shape[1]} columns
 Columns: {list(df_cleaned.columns)}
-Statistics:
+
+Real Statistics:
 {real_stats}
-Sample:
+
+Sample Data:
 {sample_data}
-Rules:
-- Answer ONLY based on real data
-- Never invent values
-- Be concise and clear
-- Respond in English"""
+
+STRICT RULES:
+- ONLY answer questions directly related to this dataset and its analysis
+- If the user asks ANYTHING outside data analysis such as recipes, general knowledge, coding help, jokes, stories, or any unrelated topic, respond ONLY with exactly this message: "I am a Data Analysis Assistant. I can only answer questions about your uploaded dataset. Please ask me about your data statistics, columns, values, or analysis."
+- Never provide recipes, stories, advice, or any off-topic content under any circumstances
+- Never go outside the context of the provided dataset
+- Do NOT invent or assume any values not present in the data
+- Always respond in English
+- Be concise and clear"""
 
         response = client.chat.completions.create(
             messages=[
@@ -339,7 +347,10 @@ def download_pdf():
         story = []
 
         # Title
-        story.append(Paragraph("Universal DataFlow System - Full Report", styles['Title']))
+        story.append(Paragraph(
+            "Universal DataFlow System - Full Report",
+            styles['Title']
+        ))
         story.append(Spacer(1, 20))
 
         # Preprocessing Report
@@ -380,7 +391,10 @@ def download_pdf():
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [
+                colors.white,
+                colors.HexColor('#f7fafc')
+            ]),
         ]))
         story.append(t)
 
