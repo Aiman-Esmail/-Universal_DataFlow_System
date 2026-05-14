@@ -7,3 +7,6 @@ google-generativeai
 gunicorn
 xlsxwriter
 groq
+matplotlib
+seaborn
+openpyxl
