@@ -5,3 +5,5 @@ scikit-learn
 imbalanced-learn
 google-generativeai
 gunicorn
+xlsxwriter
+groq
