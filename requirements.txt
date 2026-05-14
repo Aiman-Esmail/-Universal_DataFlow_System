@@ -10,3 +10,4 @@ groq
 matplotlib
 seaborn
 openpyxl
+fpdf
