@@ -31,7 +31,6 @@ plt.rcParams['figure.max_open_warning'] = 0
 
 
 def clean_text(text):
-    """Remove markdown symbols for clean reports"""
     import re
     text = re.sub(r'\*+', '', text)
     text = re.sub(r'#+\s*', '', text)
@@ -53,7 +52,6 @@ def fig_to_base64(fig):
 def generate_charts(df):
     charts = []
 
-    # Chart 1: Distributions
     try:
         numeric_cols = df.select_dtypes(include='number').columns[:2]
         if len(numeric_cols) > 0:
@@ -69,7 +67,6 @@ def generate_charts(df):
     except Exception:
         plt.close('all')
 
-    # Chart 2: Correlation Heatmap
     try:
         numeric_df = df.select_dtypes(include='number')
         if numeric_df.shape[1] >= 2:
@@ -89,7 +86,6 @@ def generate_charts(df):
     except Exception:
         plt.close('all')
 
-    # Chart 3: Boxplot
     try:
         numeric_cols = df.select_dtypes(include='number').columns[:3]
         if len(numeric_cols) > 0:
@@ -102,7 +98,6 @@ def generate_charts(df):
     except Exception:
         plt.close('all')
 
-    # Chart 4: Class Balance
     try:
         cat_cols = df.select_dtypes(include='object').columns[:1]
         for col in cat_cols:
@@ -117,7 +112,6 @@ def generate_charts(df):
     except Exception:
         plt.close('all')
 
-    # Chart 5: Missing Values Before
     try:
         if processing_summary.get('nulls_before'):
             nulls = pd.Series(processing_summary['nulls_before'])
@@ -140,30 +134,29 @@ def process_dataframe(df):
     log = []
     summary = {}
 
-    # Step 1: Basic Info
     summary['initial_rows'] = len(df)
     summary['initial_cols'] = len(df.columns)
     summary['nulls_before'] = df.isnull().sum().to_dict()
     summary['duplicates'] = int(df.duplicated().sum())
 
-    # Step 2: Remove Empty Columns
+    # Step 1: Remove Empty Columns
     empty_cols = df.columns[df.isnull().all()].tolist()
     if empty_cols:
         df = df.drop(columns=empty_cols)
         log.append(f"Removed {len(empty_cols)} completely empty columns: {empty_cols}")
 
-    # Step 3: Remove Duplicates
+    # Step 2: Remove Duplicates
     if summary['duplicates'] > 0:
         df = df.drop_duplicates().copy()
         log.append(f"Removed {summary['duplicates']} duplicate rows")
 
-    # Step 4: Remove Constant Columns
+    # Step 3: Remove Constant Columns
     constant_cols = [col for col in df.columns if df[col].nunique() <= 1]
     if constant_cols:
         df = df.drop(columns=constant_cols)
-        log.append(f"Removed {len(constant_cols)} constant columns (same value in all rows): {constant_cols}")
+        log.append(f"Removed {len(constant_cols)} constant columns: {constant_cols}")
 
-    # Step 5: Fix Data Types
+    # Step 4: Fix Data Types
     for col in df.columns:
         if df[col].dtype == 'object':
             try:
@@ -172,7 +165,7 @@ def process_dataframe(df):
             except Exception:
                 pass
 
-    # Step 6: Handle Missing Values
+    # Step 5: Handle Missing Values
     for col in df.columns:
         null_count = df[col].isnull().sum()
         if null_count > 0:
@@ -186,7 +179,7 @@ def process_dataframe(df):
                 df[col] = df[col].fillna(med_val)
                 log.append(f"Column '{col}': filled {null_count} missing values with median {med_val:.2f}")
 
-    # Step 7: High Correlation Detection (Overfitting Prevention)
+    # Step 6: High Correlation Detection
     high_corr_pairs = []
     try:
         numeric_df = df.select_dtypes(include='number')
@@ -195,27 +188,28 @@ def process_dataframe(df):
             upper = corr_matrix.where(
                 np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
             )
-            high_corr = [(col, row, round(upper.loc[row, col], 2))
-                        for col in upper.columns
-                        for row in upper.index
-                        if upper.loc[row, col] > 0.95]
+            high_corr = [
+                (col, row, round(upper.loc[row, col], 2))
+                for col in upper.columns
+                for row in upper.index
+                if upper.loc[row, col] > 0.95
+            ]
             if high_corr:
                 high_corr_pairs = high_corr
-                log.append(f"Detected {len(high_corr)} highly correlated column pairs (correlation > 0.95) that may cause overfitting: {[(p[0], p[1]) for p in high_corr]}")
+                log.append(f"Detected {len(high_corr)} highly correlated column pairs (above 0.95) that may cause overfitting: {[(p[0], p[1]) for p in high_corr]}")
     except Exception:
         pass
 
-    # Step 8: Low Variance Detection
+    # Step 7: Low Variance Detection
     try:
         numeric_df = df.select_dtypes(include='number')
-        low_var_cols = [col for col in numeric_df.columns
-                       if numeric_df[col].std() < 0.01]
+        low_var_cols = [col for col in numeric_df.columns if numeric_df[col].std() < 0.01]
         if low_var_cols:
-            log.append(f"Detected {len(low_var_cols)} low variance columns (nearly constant): {low_var_cols}")
+            log.append(f"Detected {len(low_var_cols)} low variance columns: {low_var_cols}")
     except Exception:
         pass
 
-    # Step 9: Class Imbalance Detection and Fix
+    # Step 8: Class Imbalance Detection and Fix
     imbalance_fixed = []
     try:
         for col in df.columns:
@@ -223,20 +217,39 @@ def process_dataframe(df):
                 counts = df[col].value_counts()
                 ratio = counts.min() / counts.max()
                 if ratio < 0.5:
-                    majority = df[df[col] == counts.idxmax()]
-                    minority = df[df[col] == counts.idxmin()]
-                    minority_upsampled = resample(
-                        minority,
-                        replace=True,
-                        n_samples=len(majority),
-                        random_state=42
-                    )
-                    df = pd.concat([majority, minority_upsampled])
+                    majority_class = counts.idxmax()
+                    minority_class = counts.idxmin()
+                    majority = df[df[col] == majority_class]
+                    minority = df[df[col] == minority_class]
+
+                    if len(df) > 50000:
+                        # Large files: Undersampling
+                        majority_downsampled = resample(
+                            majority,
+                            replace=False,
+                            n_samples=len(minority) * 2,
+                            random_state=42
+                        )
+                        df = pd.concat([majority_downsampled, minority])
+                        method = "Undersampling"
+                    else:
+                        # Small files: Oversampling
+                        minority_upsampled = resample(
+                            minority,
+                            replace=True,
+                            n_samples=len(majority),
+                            random_state=42
+                        )
+                        df = pd.concat([majority, minority_upsampled])
+                        method = "Oversampling"
+
                     df = df.sample(frac=1, random_state=42).reset_index(drop=True)
                     imbalance_fixed.append(
-                        f"Column '{col}': balanced from {counts.to_dict()} to {df[col].value_counts().to_dict()}"
+                        f"Column '{col}': imbalance ratio was {ratio:.2f}, applied {method}, final rows: {len(df)}"
                     )
-                    log.append(f"Column '{col}': detected class imbalance (ratio {ratio:.2f}), applied Random Oversampling to balance classes")
+                    log.append(
+                        f"Column '{col}': detected class imbalance (ratio {ratio:.2f}), applied {method} to balance"
+                    )
     except Exception:
         pass
 
@@ -245,22 +258,18 @@ def process_dataframe(df):
     summary['high_corr_pairs'] = high_corr_pairs
     summary['imbalance_fixed'] = imbalance_fixed
     summary['log'] = log
-
     processing_summary = summary
+
     return df, summary, log
 
 
 def create_ml_ready(df):
     df_ml = df.copy()
-    encoders = {}
 
-    # Label Encoding for categorical columns
     for col in df_ml.select_dtypes(include='object').columns:
         le = LabelEncoder()
         df_ml[col] = le.fit_transform(df_ml[col].astype(str))
-        encoders[col] = le
 
-    # Standard Scaling for numeric columns
     numeric_cols = df_ml.select_dtypes(include='number').columns
     if len(numeric_cols) > 0:
         scaler = StandardScaler()
@@ -293,20 +302,19 @@ def process_data():
 
         real_stats = df_cleaned.describe(include='all').to_string()
 
-        # AI Preprocessing Report
         preprocessing_prompt = f"""
-Write a professional data preprocessing report. 
+Write a professional data preprocessing report.
 Use plain sentences only. No bullet symbols, no asterisks, no hashtags, no markdown.
-Use simple numbered sections like: 1. Overview  2. Steps Applied  3. Quality Assessment  4. Key Findings
+Use simple numbered sections: 1. Overview  2. Steps Applied  3. Quality Assessment  4. Key Findings
 
-Real data only, do not invent numbers:
+Use ONLY this real data, do not invent numbers:
 
 Initial rows: {summary['initial_rows']}
 Initial columns: {summary['initial_cols']}
 Final rows: {summary['final_rows']}
 Final columns: {summary['final_cols']}
 Duplicates removed: {summary['duplicates']}
-Missing values before: {summary['nulls_before']}
+Missing values before cleaning: {summary['nulls_before']}
 High correlation pairs detected: {summary['high_corr_pairs']}
 Imbalance fixed: {summary['imbalance_fixed']}
 All steps applied: {log}
@@ -319,7 +327,7 @@ Statistics after cleaning:
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a professional Data Analyst. Write clean reports in plain English. Never use asterisks, hashtags, bullet symbols, or any markdown formatting. Use simple numbered sections and plain paragraphs only."
+                    "content": "You are a professional Data Analyst. Write clean reports in plain English. Never use asterisks, hashtags, bullet symbols, or any markdown. Use numbered sections and plain paragraphs only."
                 },
                 {"role": "user", "content": preprocessing_prompt}
             ],
@@ -327,7 +335,6 @@ Statistics after cleaning:
         )
         latest_ai_report = clean_text(response.choices[0].message.content)
 
-        # AI Visualization Report
         viz_prompt = f"""
 Write a professional data visualization report explaining what the charts show.
 Use plain sentences only. No bullet symbols, no asterisks, no hashtags, no markdown.
@@ -419,7 +426,7 @@ STRICT RULES:
 1. Answer in the SAME language the user uses
 2. ONLY answer questions about this dataset
 3. Topics allowed: cleaning steps, statistics, columns, values, imbalance, correlation, overfitting, preprocessing, distributions, missing values, duplicates
-4. If user asks anything off-topic (recipes, general knowledge, jokes, etc.), respond in their language: "I am a Data Analysis Assistant. I can only answer questions about your uploaded dataset."
+4. If user asks anything off-topic respond in their language: "I am a Data Analysis Assistant. I can only answer questions about your uploaded dataset."
 5. Never invent values
 6. Be concise and professional
 7. Never use asterisks or markdown symbols in responses"""
@@ -539,12 +546,10 @@ def download_pdf():
 
         story = []
 
-        # Title
         story.append(Paragraph("Universal DataFlow System", title_style))
         story.append(Paragraph("Automated Data Processing Report", styles['Heading2']))
         story.append(Spacer(1, 20))
 
-        # Summary Stats Table
         story.append(Paragraph("Processing Summary", heading_style))
         summary_data = [
             ['Metric', 'Value'],
@@ -563,10 +568,7 @@ def download_pdf():
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [
-                colors.white,
-                colors.HexColor('#f7fafc')
-            ]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ROWHEIGHT', (0, 0), (-1, -1), 25),
@@ -574,7 +576,6 @@ def download_pdf():
         story.append(summary_table)
         story.append(Spacer(1, 20))
 
-        # Processing Steps
         story.append(Paragraph("Processing Steps Applied", heading_style))
         log = processing_summary.get('log', [])
         if log:
@@ -584,21 +585,18 @@ def download_pdf():
             story.append(Paragraph("No issues found. Data was already clean.", normal_style))
         story.append(Spacer(1, 15))
 
-        # Preprocessing Report
         story.append(Paragraph("AI Preprocessing Analysis", heading_style))
         for line in latest_ai_report.split('\n'):
             if line.strip():
                 story.append(Paragraph(line.strip(), normal_style))
         story.append(Spacer(1, 15))
 
-        # Visualization Report
         story.append(Paragraph("AI Visualization Analysis", heading_style))
         for line in latest_viz_report.split('\n'):
             if line.strip():
                 story.append(Paragraph(line.strip(), normal_style))
         story.append(Spacer(1, 15))
 
-        # Stats Table
         story.append(Paragraph("Data Statistics After Cleaning", heading_style))
         stats_df = df_cleaned.describe(include='all').reset_index()
         max_cols = min(len(stats_df.columns), 7)
@@ -617,10 +615,7 @@ def download_pdf():
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [
-                colors.white,
-                colors.HexColor('#f7fafc')
-            ]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ]))
         story.append(t)
