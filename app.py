@@ -407,11 +407,11 @@ def download_pdf():
         story.append(Paragraph("Executive Data Preprocessing & Analysis Report", ParagraphStyle('Sub', parent=body_style, fontSize=12, textColor=colors.HexColor("#718096"))))
         story.append(Spacer(1, 15))
         
-        # Section 1: Baseline Metrics Table
-        story.append(Paragraph("1. Baseline Dataset Metrics Baseline", h2_style))
+        # Section 1: Baseline Metrics Table (Fixed Heading Typos)
+        story.append(Paragraph("1. Baseline Dataset Metrics", h2_style))
         
         data_metrics = [
-            [Paragraph("<b>Metric Dimension</b>", body_style), Paragraph("<b>Record Volume</b>", body_style), Paragraph("<b>Status Baseline</b>", body_style)],
+            [Paragraph("<b>Metric Dimension</b>", body_style), Paragraph("<b>Record Volume</b>", body_style), Paragraph("<b>Status</b>", body_style)],
             [Paragraph("Initial Uploaded Records", body_style), Paragraph(str(initial_rows), body_style), Paragraph("Raw Input Baseline", body_style)],
             [Paragraph("Identified & Purged Duplicates", body_style), Paragraph(str(duplicates), body_style), Paragraph("Redundancy Cleaned", body_style)],
             [Paragraph("Final Model-Ready Records", body_style), Paragraph(str(final_rows), body_style), Paragraph("Optimized Matrix", body_style)]
@@ -443,7 +443,7 @@ def download_pdf():
         story.append(Paragraph(audit_text, body_style))
         story.append(Spacer(1, 15))
         
-        # Section 3: In-Memory Dynamic Visualization Generation (Safe & Secure)
+        # Section 3: In-Memory Dynamic Visualization Generation
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         if len(numeric_cols) >= 2:
             story.append(Paragraph("3. Statistical Data Visualizations", h2_style))
@@ -463,7 +463,7 @@ def download_pdf():
             img_buf.seek(0)
             plt.close()
             
-            # Append ReportLab Image object directly from memory buffer safely
+            # Append Image safely from buffer
             story.append(Image(img_buf, width=300, height=180))
             story.append(Spacer(1, 10))
             story.append(Paragraph("Figure 1.0: Linear dependence matrix analysis mapped against baseline numeric features variance thresholds.", ParagraphStyle('Cap', parent=body_style, fontSize=8, textColor=colors.HexColor("#718096"))))
