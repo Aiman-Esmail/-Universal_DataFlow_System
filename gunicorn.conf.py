@@ -1,10 +1,34 @@
-bind = "0.0.0.0:10000"
-workers = 1
-timeout = 600
-worker_class = "sync"
-preload_app = False
-worker_connections = 1000
+import os
+import multiprocessing
+
+# ==========================================
+# Timeout & Performance Settings
+# ==========================================
+
+timeout = 300
 keepalive = 5
-max_requests = 50
-max_requests_jitter = 10
-graceful_timeout = 120
+
+# ==========================================
+# Concurrency & Worker Settings
+# ==========================================
+
+workers = 2
+threads = 4
+worker_class = 'gthread'
+
+max_requests = 1000
+max_requests_jitter = 50
+
+# ==========================================
+# Network & Binding Settings
+# ==========================================
+
+bind = f"0.0.0.0:{os.environ.get('PORT', 5000)}"
+
+# ==========================================
+# Logging Settings
+# ==========================================
+
+accesslog = '-'
+errorlog = '-'
+loglevel = 'info'
