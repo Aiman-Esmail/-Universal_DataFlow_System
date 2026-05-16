@@ -245,10 +245,11 @@ def process_dataframe(df):
     except Exception:
         pass
 
-    # Step 8: Class Imbalance Detection and Fix
+    # Step 8: Class Imbalance Detection and Fix (Fixed to avoid infinite loop)
     imbalance_fixed = []
     try:
-        for col in df.columns:
+        current_columns = list(df.columns)
+        for col in current_columns:
             if df[col].nunique() == 2:
                 counts = df[col].value_counts()
                 ratio = counts.min() / counts.max()
@@ -482,10 +483,10 @@ STRICT RULES:
             model="llama-3.1-8b-instant",
         )
         reply = clean_text(response.choices[0].message.content)
-        return jsonify({"reply": reply})
+        return jsonify({ "reply": reply })
 
     except Exception as e:
-        return jsonify({"reply": f"Error: {str(e)}"})
+        return jsonify({ "reply": f"Error: {str(e)}" })
 
 
 @app.route('/download_csv', methods=['GET'])
@@ -686,5 +687,6 @@ def download_pdf():
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
+    # Fixed to allow dynamic port selection or defaulting to 5000 locally
+    port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
