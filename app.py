@@ -1,3 +1,4 @@
+
 import os
 from flask import Flask, render_template, request, jsonify, session, send_file
 import pandas as pd
@@ -7,12 +8,13 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io
 import base64
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
 
-# 1. Define the Flask application and configurations
+# Import ReportLab modules for PDF generation
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+
+# 1. Initialize Flask Application and Configurations
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_for_universal_dataflow'
 
@@ -20,6 +22,9 @@ app.secret_key = 'super_secret_key_for_universal_dataflow'
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+# Global static path for Render environment stability
+STATIC_CLEANED_PATH = os.path.join(UPLOAD_FOLDER, 'latest_cleaned_data.csv')
 
 @app.route('/')
 def index():
@@ -36,17 +41,16 @@ def process():
     
     if file and file.filename.endswith('.csv'):
         try:
-            # Read original file
+            # Read original dataset and extract dimensions
             df = pd.read_csv(file)
             initial_rows = len(df)
             columns = df.columns.tolist()
             
-            # 1. Remove Duplicates
-            initial_count = len(df)
+            # Step 1: Handle Duplicates Purging
             df_cleaned = df.drop_duplicates()
-            duplicates_removed = initial_count - len(df_cleaned)
+            duplicates_removed = initial_rows - len(df_cleaned)
             
-            # 2. Handle Missing Values (With dynamic tracking for the report)
+            # Step 2: Handle Missing Values Imputation
             imputed_numeric_cols = []
             imputed_categorical_cols = []
             
@@ -59,7 +63,7 @@ def process():
                         df_cleaned[col] = df_cleaned[col].fillna(df_cleaned[col].mode()[0])
                         imputed_categorical_cols.append(col)
             
-            # Professional Text Formatting: Check if there were actually any missing values
+            # Professional Text Formatting Validation
             if imputed_numeric_cols:
                 numeric_summary = f"Numeric columns repaired via median imputation: [{', '.join(imputed_numeric_cols)}]."
                 ai_numeric_segment = f"Columns with missing entries [{', '.join(imputed_numeric_cols)}] were automatically calculated and filled using data-driven median values to protect statistical integrity."
@@ -80,7 +84,7 @@ def process():
                 categorical_summary
             ]
             
-            # 3. Class Balancing (Automated target detection and balancing)
+            # Step 3: Automated Class Balancing
             target_col = None
             for col in df_cleaned.columns:
                 if 'target' in col.lower() or 'label' in col.lower() or 'class' in col.lower() or 'binary' in col.lower():
@@ -92,7 +96,7 @@ def process():
                 value_counts = df_cleaned[target_col].value_counts()
                 min_class_size = value_counts.min()
                 
-                # Apply downsampling to balance classes
+                # Apply downsampling to balance classes equally
                 df_balanced = pd.concat([
                     df_cleaned[df_cleaned[target_col] == cls].sample(min_class_size, random_state=42)
                     for cls in value_counts.index
@@ -102,17 +106,14 @@ def process():
             
             final_rows = len(df_cleaned)
             
-            # Save the cleaned dataframe directly to the server storage
-            cleaned_file_path = os.path.join(UPLOAD_FOLDER, 'latest_cleaned_data.csv')
-            df_cleaned.to_csv(cleaned_file_path, index=False)
-            
-            # Keep only the file path string in the flask session
-            session['cleaned_file_path'] = cleaned_file_path
+            # Save the cleaned dataframe to static server storage
+            df_cleaned.to_csv(STATIC_CLEANED_PATH, index=False)
+            session['cleaned_file_path'] = STATIC_CLEANED_PATH
             session['initial_rows'] = initial_rows
             session['final_rows'] = final_rows
             session['duplicates'] = duplicates_removed
             
-            # Dynamic Expanded AI Report (Polished to be elite and completely bug-free)
+            # Dynamic Expanded AI Report
             ai_response = (
                 f"The initial dataset optimization successfully audited {initial_rows} rows across {len(columns)} structural features.\n\n"
                 f"• Data Cleansing: {duplicates_removed} completely redundant rows were purged.\n"
@@ -123,11 +124,12 @@ def process():
             
             viz_response = "Automated distribution analysis generated. Correlation matrix mapping indicates features dependency matrix."
             
-            # 4. Generate Visualizations (Safe non-interactive plotting)
+            # Step 4: Generate Statistical Visualizations
             charts = []
             numeric_cols = df_cleaned.select_dtypes(include=[np.number]).columns.tolist()
             
             if len(numeric_cols) >= 2:
+                # 1. Correlation Matrix Heatmap
                 plt.figure(figsize=(6, 4))
                 corr = df_cleaned[numeric_cols].corr()
                 plt.imshow(corr, cmap='coolwarm', interpolation='none')
@@ -144,6 +146,7 @@ def process():
                 charts.append(("Correlation Matrix Heatmap", f"data:image/png;base64,{img_base64}"))
                 plt.close()
                 
+                # 2. Boxplot Distribution Analysis
                 plt.figure(figsize=(6, 4))
                 df_cleaned.boxplot(column=numeric_cols[0])
                 plt.title(f"Distribution Profile: {numeric_cols[0]}", fontsize=10)
@@ -183,21 +186,20 @@ def chat():
     data = request.get_json()
     user_message = data.get('message', '').lower()
     
-    # Securely fallback to standard path if session variable drops
-    file_path = session.get('cleaned_file_path', os.path.join(UPLOAD_FOLDER, 'latest_cleaned_data.csv'))
+    if os.path.exists(STATIC_CLEANED_PATH):
+        file_path = STATIC_CLEANED_PATH
+    else:
+        file_path = session.get('cleaned_file_path', '')
     
-    # 1. Enhanced Language Detection
+    # Language detection for dynamic multilingual support
     is_arabic = any(char in user_message for char in 'أبتثجحخدذرزسشصضطظعغفقكلمنهويإآةى')
-    
-    # Expanded German keywords including common verbs and pronouns (hast, du, das, ist, sind, behoben, etc.)
     german_keywords = [
         'was', 'wie', 'viele', 'spalten', 'zeilen', 'durchschnitt', 'wert', 'duplikate', 'fehlende', 
-        'zusammenfassung', 'korrelation', 'hast', 'du', 'das', 'ist', 'sind', 'behoben', 'daten', 'analyse', 'bereinigt'
+        'zusammenfassung', 'korrelation', 'hast', 'du', 'das', 'ist', 'sind', 'behoben', 'daten', 'analyse', 'bereinigt', 'ungleichgewicht'
     ]
     is_german = any(word in user_message for word in german_keywords)
     
-    # 2. Absolute check if the physical file exists on the server
-    if not os.path.exists(file_path):
+    if not file_path or not os.path.exists(file_path):
         if is_arabic:
             return jsonify({'reply': 'الرجاء رفع ملف CSV أولاً قبل طرح الأسئلة.'})
         elif is_german:
@@ -206,15 +208,10 @@ def chat():
             return jsonify({'reply': 'Please upload a CSV file first before asking questions.'})
     
     try:
-        # Load data context safely
         df = pd.read_csv(file_path)
-        
-        # Dynamic fallback calculation if Render clears the flash session memory
         final_rows = len(df)
-        initial_rows = session.get('initial_rows', final_rows)
-        duplicates = session.get('duplicates', 0)
         
-        # 3. Guardrail: Check if the question is out of project scope
+        # Guardrail scope restriction setup
         scope_keywords = [
             'missing', 'null', 'void', 'imbalance', 'balance', 'correlation', 'relation', 'duplicate', 
             'removed', 'summary', 'done', 'average', 'mean', 'max', 'min', 'columns', 'features', 'rows', 'size',
@@ -230,8 +227,7 @@ def chat():
             else:
                 return jsonify({'reply': 'Sorry, I am an AI assistant specialized only in analyzing and preprocessing the current data matrix. I cannot answer out-of-scope questions.'})
 
-        # 4. Rule-based analytical chatbot routing (Trilingual Support)
-        # Missing Values
+        # Multilingual contextual evaluation mappings
         if any(w in user_message for w in ['missing', 'null', 'مفقود', 'فارغ', 'fehlende', 'leere']):
             if is_arabic:
                 reply = "تمت معالجة جميع القيم المفقودة تلقائياً. الأعمدة الرقمية استخدمت الوسيط الحسابي، والأعمدة النصية استخدمت المنوال الشائع."
@@ -240,7 +236,6 @@ def chat():
             else:
                 reply = "All missing values have been automatically resolved. Numeric columns used median imputation, and categorical columns used mode fallback."
                 
-        # Class Imbalance (Matches 'imbalance', 'balance', 'توازن', 'ungleichgewicht', 'behoben')
         elif any(w in user_message for w in ['imbalance', 'balance', 'توازن', 'ungleichgewicht', 'behoben']):
             if is_arabic:
                 reply = f"اكتملت عملية تحسين توازن الفئات المستهدفة ديناميكياً، مما أنتج مصفوفة جاهزة للنموذج تحتوي على {final_rows} صفاً."
@@ -249,7 +244,6 @@ def chat():
             else:
                 reply = f"Class distribution optimization completed. Balanced target parameters dynamically, resulting in a model-ready matrix of {final_rows} rows."
                 
-        # Correlation
         elif any(w in user_message for w in ['correlation', 'relation', 'ارتباط', 'علاقة', 'korrelation', 'beziehung']):
             if is_arabic:
                 reply = "تم رسم خريطة ارتباط الميزات بنجاح. تم فحص العلاقات الخطية العالية لضمان استقلالية البيانات المدخلة في النموذج."
@@ -258,7 +252,6 @@ def chat():
             else:
                 reply = "Feature dependencies mapped successfully. High collinearity metrics were checked against variance thresholds to ensure model input independence."
                 
-        # Duplicates
         elif any(w in user_message for w in ['duplicate', 'removed', 'مكرر', 'حذف', 'duplikate', 'gelöscht']):
             if is_arabic:
                 reply = f"تأكد نظام فحص البيانات من معالجة وحذف السجلات المكررة. البيانات الحالية فريدة تماماً بنسبة 100%."
@@ -267,7 +260,6 @@ def chat():
             else:
                 reply = f"Data auditing confirmed and processed duplicate records verification. System baseline dataset is fully unique."
                 
-        # Summary
         elif any(w in user_message for w in ['summary', 'done', 'ملخص', 'ماذا فعلت', 'zusammenfassung']):
             if is_arabic:
                 reply = f"ملخص العمل: تم تنظيف البيانات وموازنتها لتصبح {final_rows} صفاً صافياً وجاهزاً. تم حذف التكرار، تعبئة الفراغات، وموازنة الفئات بأمان."
@@ -276,7 +268,6 @@ def chat():
             else:
                 reply = f"Summary: Input dataset has been optimized down to {final_rows} clean balanced entries. Redundancies purged, voids imputed seamlessly, and class distribution balanced safely."
                 
-        # Averages / Means
         elif any(w in user_message for w in ['average', 'mean', 'متوسط', 'معدل', 'durchschnitt']):
             numeric_df = df.select_dtypes(include=[np.number])
             if not numeric_df.empty:
@@ -295,7 +286,6 @@ def chat():
                 else:
                     reply = "No computational numeric columns available to compute averages."
                     
-        # Max / Min Boundaries
         elif any(w in user_message for w in ['max', 'min', 'أعلى', 'أقل', 'maximum', 'minimum']):
             numeric_df = df.select_dtypes(include=[np.number])
             if not numeric_df.empty:
@@ -315,7 +305,6 @@ def chat():
                 else:
                     reply = "No computational numeric columns available to extract boundaries."
                     
-        # Columns / Features Info
         elif any(w in user_message for w in ['columns', 'features', 'أعمدة', 'خصائص', 'spalten', 'merkmale']):
             if is_arabic:
                 reply = f"تحتوي بياناتك على {len(df.columns)} عموداً نشطاً وهي: {', '.join(df.columns.tolist())}."
@@ -343,18 +332,15 @@ def chat():
 
 @app.route('/download_csv')
 def download_csv():
-    file_path = session.get('cleaned_file_path', os.path.join(UPLOAD_FOLDER, 'latest_cleaned_data.csv'))
-    if file_path and os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True, download_name='cleaned_dataset.csv')
+    if os.path.exists(STATIC_CLEANED_PATH):
+        return send_file(STATIC_CLEANED_PATH, as_attachment=True, download_name='cleaned_dataset.csv')
     return "Error: File not found.", 404
 
 @app.route('/download_ml')
 def download_ml():
-    file_path = session.get('cleaned_file_path', os.path.join(UPLOAD_FOLDER, 'latest_cleaned_data.csv'))
-    if file_path and os.path.exists(file_path):
-        df = pd.read_csv(file_path)
+    if os.path.exists(STATIC_CLEANED_PATH):
+        df = pd.read_csv(STATIC_CLEANED_PATH)
         df_encoded = pd.get_dummies(df, drop_first=True)
-        
         buf = io.BytesIO()
         df_encoded.to_csv(buf, index=False)
         buf.seek(0)
@@ -363,9 +349,8 @@ def download_ml():
 
 @app.route('/download_excel')
 def download_excel():
-    file_path = session.get('cleaned_file_path', os.path.join(UPLOAD_FOLDER, 'latest_cleaned_data.csv'))
-    if file_path and os.path.exists(file_path):
-        df = pd.read_csv(file_path)
+    if os.path.exists(STATIC_CLEANED_PATH):
+        df = pd.read_csv(STATIC_CLEANED_PATH)
         buf = io.BytesIO()
         with pd.ExcelWriter(buf, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Cleaned Data')
@@ -375,13 +360,33 @@ def download_excel():
 
 @app.route('/download_pdf')
 def download_pdf():
-    file_path = session.get('cleaned_file_path', os.path.join(UPLOAD_FOLDER, 'latest_cleaned_data.csv'))
-    if file_path and os.path.exists(file_path):
-        df = pd.read_csv(file_path)
+    if os.path.exists(STATIC_CLEANED_PATH):
+        df = pd.read_csv(STATIC_CLEANED_PATH)
         final_rows = len(df)
         initial_rows = session.get('initial_rows', final_rows)
         duplicates = session.get('duplicates', 0)
         
         buf = io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=letter)
-        styles
+        
+        # Instantiate ReportLab sample stylesheet object cleanly
+        styles = getSampleStyleSheet()
+        
+        story = []
+        
+        # Build PDF structure elements seamlessly
+        story.append(Paragraph("Universal DataFlow System - Analysis Report", styles['Title']))
+        story.append(Spacer(1, 20))
+        story.append(Paragraph(f"Initial Dataset Records: {initial_rows}", styles['Normal']))
+        story.append(Paragraph(f"Identified and Purged Duplicates: {duplicates}", styles['Normal']))
+        story.append(Paragraph(f"Optimized Downsampled Records: {final_rows}", styles['Normal']))
+        story.append(Spacer(1, 20))
+        story.append(Paragraph("System Execution Pipeline completed without system error.", styles['Heading2']))
+        
+        doc.build(story)
+        buf.seek(0)
+        return send_file(buf, as_attachment=True, download_name='dataflow_executive_report.pdf', mimetype='application/pdf')
+    return "Error: File not found.", 404
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000, debug=True)
