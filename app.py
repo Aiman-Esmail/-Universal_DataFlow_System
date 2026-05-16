@@ -106,7 +106,7 @@ def process():
         
         # 5. Build mock matrix table preview
         df_preview = pd.DataFrame(
-            np.random.randint(10, 99, size=(5, 4)), 
+            np.random.randint(10, 99, size=(10, 4)), 
             columns=['Feature_1', 'Feature_2', 'Feature_3', 'Target_Class']
         )
         tables = [df_preview.to_html(classes='table table-striped table-bordered text-center', index=False)]
