@@ -55,11 +55,12 @@ def generate_charts(df):
     try:
         numeric_cols = df.select_dtypes(include='number').columns[:2]
         if len(numeric_cols) > 0:
+            sample = df[numeric_cols].sample(min(5000, len(df)), random_state=42)
             fig, axes = plt.subplots(1, len(numeric_cols), figsize=(8, 3))
             if len(numeric_cols) == 1:
                 axes = [axes]
             for ax, col in zip(axes, numeric_cols):
-                df[col].dropna().hist(ax=ax, bins=15, color='steelblue', edgecolor='white')
+                sample[col].dropna().hist(ax=ax, bins=15, color='steelblue', edgecolor='white')
                 ax.set_title(f'{col}')
             plt.tight_layout()
             charts.append(('Numeric Distributions', fig_to_base64(fig)))
@@ -70,9 +71,10 @@ def generate_charts(df):
     try:
         numeric_df = df.select_dtypes(include='number')
         if numeric_df.shape[1] >= 2:
+            sample = numeric_df.sample(min(5000, len(numeric_df)), random_state=42)
             fig, ax = plt.subplots(figsize=(7, 4))
             sns.heatmap(
-                numeric_df.corr(),
+                sample.corr(),
                 annot=True,
                 fmt='.2f',
                 cmap='coolwarm',
@@ -89,8 +91,9 @@ def generate_charts(df):
     try:
         numeric_cols = df.select_dtypes(include='number').columns[:3]
         if len(numeric_cols) > 0:
+            sample = df[numeric_cols].sample(min(5000, len(df)), random_state=42)
             fig, ax = plt.subplots(figsize=(7, 4))
-            df[numeric_cols].boxplot(ax=ax)
+            sample.boxplot(ax=ax)
             ax.set_title('Boxplot - Outlier Detection')
             plt.tight_layout()
             charts.append(('Boxplot', fig_to_base64(fig)))
@@ -179,12 +182,13 @@ def process_dataframe(df):
                 df[col] = df[col].fillna(med_val)
                 log.append(f"Column '{col}': filled {null_count} missing values with median {med_val:.2f}")
 
-    # Step 6: High Correlation Detection
+    # Step 6: High Correlation Detection on sample
     high_corr_pairs = []
     try:
         numeric_df = df.select_dtypes(include='number')
         if numeric_df.shape[1] >= 2:
-            corr_matrix = numeric_df.corr().abs()
+            sample_df = numeric_df.sample(min(5000, len(numeric_df)), random_state=42)
+            corr_matrix = sample_df.corr().abs()
             upper = corr_matrix.where(
                 np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
             )
@@ -196,7 +200,7 @@ def process_dataframe(df):
             ]
             if high_corr:
                 high_corr_pairs = high_corr
-                log.append(f"Detected {len(high_corr)} highly correlated column pairs (above 0.95) that may cause overfitting: {[(p[0], p[1]) for p in high_corr]}")
+                log.append(f"Detected {len(high_corr)} highly correlated column pairs (above 0.95): {[(p[0], p[1]) for p in high_corr]}")
     except Exception:
         pass
 
@@ -223,17 +227,15 @@ def process_dataframe(df):
                     minority = df[df[col] == minority_class]
 
                     if len(df) > 50000:
-                        # Large files: Undersampling
                         majority_downsampled = resample(
                             majority,
                             replace=False,
-                            n_samples=len(minority) * 2,
+                            n_samples=min(len(minority) * 2, len(majority)),
                             random_state=42
                         )
                         df = pd.concat([majority_downsampled, minority])
                         method = "Undersampling"
                     else:
-                        # Small files: Oversampling
                         minority_upsampled = resample(
                             minority,
                             replace=True,
@@ -245,10 +247,10 @@ def process_dataframe(df):
 
                     df = df.sample(frac=1, random_state=42).reset_index(drop=True)
                     imbalance_fixed.append(
-                        f"Column '{col}': imbalance ratio was {ratio:.2f}, applied {method}, final rows: {len(df)}"
+                        f"Column '{col}': applied {method}, final rows: {len(df)}"
                     )
                     log.append(
-                        f"Column '{col}': detected class imbalance (ratio {ratio:.2f}), applied {method} to balance"
+                        f"Column '{col}': imbalance ratio {ratio:.2f}, applied {method}"
                     )
     except Exception:
         pass
@@ -273,7 +275,12 @@ def create_ml_ready(df):
     numeric_cols = df_ml.select_dtypes(include='number').columns
     if len(numeric_cols) > 0:
         scaler = StandardScaler()
-        df_ml[numeric_cols] = scaler.fit_transform(df_ml[numeric_cols])
+        if len(df_ml) > 50000:
+            sample = df_ml[numeric_cols].sample(10000, random_state=42)
+            scaler.fit(sample)
+        else:
+            scaler.fit(df_ml[numeric_cols])
+        df_ml[numeric_cols] = scaler.transform(df_ml[numeric_cols])
 
     return df_ml
 
