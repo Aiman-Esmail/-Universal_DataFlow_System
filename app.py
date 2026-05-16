@@ -19,7 +19,7 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
@@ -31,6 +31,11 @@ latest_viz_report = ""
 processing_summary = {}
 
 plt.rcParams['figure.max_open_warning'] = 0
+
+
+@app.route('/health')
+def health():
+    return "OK", 200
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -68,7 +73,9 @@ def generate_charts(df):
             if len(numeric_cols) == 1:
                 axes = [axes]
             for ax, col in zip(axes, numeric_cols):
-                sample[col].dropna().hist(ax=ax, bins=15, color='steelblue', edgecolor='white')
+                sample[col].dropna().hist(
+                    ax=ax, bins=15, color='steelblue', edgecolor='white'
+                )
                 ax.set_title(f'{col}')
             plt.tight_layout()
             charts.append(('Numeric Distributions', fig_to_base64(fig)))
@@ -154,7 +161,9 @@ def process_dataframe(df):
     empty_cols = df.columns[df.isnull().all()].tolist()
     if empty_cols:
         df = df.drop(columns=empty_cols)
-        log.append(f"Removed {len(empty_cols)} completely empty columns: {empty_cols}")
+        log.append(
+            f"Removed {len(empty_cols)} completely empty columns: {empty_cols}"
+        )
 
     # Step 2: Remove Duplicates
     if summary['duplicates'] > 0:
@@ -165,7 +174,9 @@ def process_dataframe(df):
     constant_cols = [col for col in df.columns if df[col].nunique() <= 1]
     if constant_cols:
         df = df.drop(columns=constant_cols)
-        log.append(f"Removed {len(constant_cols)} constant columns: {constant_cols}")
+        log.append(
+            f"Removed {len(constant_cols)} constant columns: {constant_cols}"
+        )
 
     # Step 4: Fix Data Types
     for col in df.columns:
@@ -184,18 +195,24 @@ def process_dataframe(df):
                 mode_val = df[col].mode()
                 fill_val = mode_val[0] if not mode_val.empty else "Unknown"
                 df[col] = df[col].fillna(fill_val)
-                log.append(f"Column '{col}': filled {null_count} missing values with most common value '{fill_val}'")
+                log.append(
+                    f"Column '{col}': filled {null_count} missing values with most common value '{fill_val}'"
+                )
             elif pd.api.types.is_numeric_dtype(df[col]):
                 med_val = df[col].median()
                 df[col] = df[col].fillna(med_val)
-                log.append(f"Column '{col}': filled {null_count} missing values with median {med_val:.2f}")
+                log.append(
+                    f"Column '{col}': filled {null_count} missing values with median {med_val:.2f}"
+                )
 
     # Step 6: High Correlation Detection on sample
     high_corr_pairs = []
     try:
         numeric_df = df.select_dtypes(include='number')
         if numeric_df.shape[1] >= 2:
-            sample_df = numeric_df.sample(min(5000, len(numeric_df)), random_state=42)
+            sample_df = numeric_df.sample(
+                min(5000, len(numeric_df)), random_state=42
+            )
             corr_matrix = sample_df.corr().abs()
             upper = corr_matrix.where(
                 np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
@@ -208,16 +225,23 @@ def process_dataframe(df):
             ]
             if high_corr:
                 high_corr_pairs = high_corr
-                log.append(f"Detected {len(high_corr)} highly correlated column pairs (above 0.95): {[(p[0], p[1]) for p in high_corr]}")
+                log.append(
+                    f"Detected {len(high_corr)} highly correlated column pairs (above 0.95): {[(p[0], p[1]) for p in high_corr]}"
+                )
     except Exception:
         pass
 
     # Step 7: Low Variance Detection
     try:
         numeric_df = df.select_dtypes(include='number')
-        low_var_cols = [col for col in numeric_df.columns if numeric_df[col].std() < 0.01]
+        low_var_cols = [
+            col for col in numeric_df.columns
+            if numeric_df[col].std() < 0.01
+        ]
         if low_var_cols:
-            log.append(f"Detected {len(low_var_cols)} low variance columns: {low_var_cols}")
+            log.append(
+                f"Detected {len(low_var_cols)} low variance columns: {low_var_cols}"
+            )
     except Exception:
         pass
 
@@ -253,7 +277,9 @@ def process_dataframe(df):
                         df = pd.concat([majority, minority_upsampled])
                         method = "Oversampling"
 
-                    df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+                    df = df.sample(
+                        frac=1, random_state=42
+                    ).reset_index(drop=True)
                     imbalance_fixed.append(
                         f"Column '{col}': applied {method}, final rows: {len(df)}"
                     )
@@ -406,7 +432,9 @@ def chat():
     global df_cleaned, processing_summary
 
     if df_cleaned is None:
-        return jsonify({"reply": "Please upload a CSV file first before asking questions."})
+        return jsonify({
+            "reply": "Please upload a CSV file first before asking questions."
+        })
 
     user_message = request.json.get('message', '')
     if not user_message:
@@ -562,7 +590,9 @@ def download_pdf():
         story = []
 
         story.append(Paragraph("Universal DataFlow System", title_style))
-        story.append(Paragraph("Automated Data Processing Report", styles['Heading2']))
+        story.append(
+            Paragraph("Automated Data Processing Report", styles['Heading2'])
+        )
         story.append(Spacer(1, 20))
 
         story.append(Paragraph("Processing Summary", heading_style))
@@ -583,7 +613,9 @@ def download_pdf():
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [
+                colors.white, colors.HexColor('#f7fafc')
+            ]),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ROWHEIGHT', (0, 0), (-1, -1), 25),
@@ -597,7 +629,9 @@ def download_pdf():
             for i, step in enumerate(log, 1):
                 story.append(Paragraph(f"{i}. {step}", log_style))
         else:
-            story.append(Paragraph("No issues found. Data was already clean.", normal_style))
+            story.append(
+                Paragraph("No issues found. Data was already clean.", normal_style)
+            )
         story.append(Spacer(1, 15))
 
         story.append(Paragraph("AI Preprocessing Analysis", heading_style))
@@ -630,7 +664,9 @@ def download_pdf():
             ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [
+                colors.white, colors.HexColor('#f7fafc')
+            ]),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ]))
         story.append(t)
