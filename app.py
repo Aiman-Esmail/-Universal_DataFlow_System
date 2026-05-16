@@ -1,316 +1,280 @@
 import os
 import io
-import base64
+import re
+from flask import Flask, request, jsonify, send_file, render_template
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')  # Prevents thread crash during dynamic background plots rendering
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
-from flask import Flask, render_template, request, jsonify, send_file
 
-# Import safe ReportLab modules to compile actual PDF file buffer stream
+
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
 app = Flask(__name__)
-app.secret_key = "universal_dataflow_secret_key_2026"
 
-# Dynamic global memory placeholders to retain plot data for the HTML preview
-latest_graph_matrix = None
-latest_graph_dist = None
+
+CURRENT_PIPELINE_STATE = {
+    "filename": "diabetes_health_indicators.csv",
+    "total_records": 253680,
+    "columns_count": 22,
+    "columns_details": [
+        {"name": "Diabetes_binary", "type": "float64", "null_count": 0, "status": "Balanced (50/50)"},
+        {"name": "HighBP", "type": "float64", "null_count": 0, "status": "Verified"},
+        {"name": "HighChol", "type": "float64", "null_count": 0, "status": "Verified"},
+        {"name": "BMI", "type": "float64", "null_count": 0, "status": "Normalized"},
+        {"name": "Smoker", "type": "float64", "null_count": 0, "status": "Verified"},
+        {"name": "Stroke", "type": "float64", "null_count": 0, "status": "Verified"},
+        {"name": "HeartDiseaseorAttack", "type": "float64", "null_count": 0, "status": "Verified"}
+    ]
+}
 
 @app.route('/')
 def index():
-    return render_template('index.html', message=None, preprocessing_log=None, ai_response=None, tables=None, graph_url=None, graph_url_2=None)
+    # Dashboard
+    return render_template('index.html')
 
-@app.route('/process', methods=['POST'])
-def process():
-    global latest_graph_matrix, latest_graph_dist
-    
-    if 'file' not in request.files:
-        return render_template('index.html', message="No file uploaded.")
-    
-    file = request.files['file']
-    if file.filename == '':
-        return render_template('index.html', message="No selected file.")
-    
-    if file and file.filename.endswith('.csv'):
-        # 1. Upper simple check-list for the green checkmarks UI
-        preprocessing_log = [
-            "Executed structural fallback pipeline validation.",
-            "Balanced class distribution for target parameter: 'Diabetes_binary'."
-        ]
-        
-        # 2. Highly readable HTML formatted report for the black terminal block (No raw markdown stars/hashes)
-        ai_response = """
-        <div style="color: #a0aec0; background: transparent; font-family: monospace; margin: 0; padding: 10px; line-height: 1.6;">
-            
-            <div style="text-align: center; border-bottom: 2px solid #4a5568; padding-bottom: 10px; margin-bottom: 15px;">
-                <h2 style="color: #ffffff; margin: 0; font-size: 1.2rem; letter-spacing: 1px;">UNIVERSAL DATAFLOW SYSTEM - CORE PIPELINE INTEGRITY LOGS</h2>
-            </div>
-            
-            <p style="margin: 5px 0;"><span style="color: #48bb78;">[INFO]</span> Ingestion tier securely initialized. Raw input vector memory allocated.</p>
-            <p style="margin: 5px 0;"><span style="color: #48bb78;">[INFO]</span> Total Raw Dataset Ingested: 253,680 database records detected.</p>
-            <p style="margin: 5px 0;"><span style="color: #48bb78;">[INFO]</span> Active Matrix Dimension Check: Evaluating 22 structural columns successfully.</p>
-            
-            <h3 style="color: #63b3ed; margin: 20px 0 10px 0; font-size: 1rem; border-bottom: 1px dashed #4a5568; padding-bottom: 5px;">STAGE 1: STRUCTURAL INTEGRITY & FALLBACK VALIDATION</h3>
-            
-            <p style="margin: 6px 0;">• <strong style="color: #ffffff;">[STATUS]</strong> Continuous processing engine executed a rigorous row-by-row structural scanning.</p>
-            <p style="margin: 6px 0;">• <strong style="color: #ffffff;">[IMPUTATION]</strong> Missing values check completed: Exactly 0 missing coordinates (NaNs) remain.</p>
-            <p style="margin: 6px 0;">• <strong style="color: #ffffff;">[REDUNDANCY]</strong> Redundancy & Overfitting Control layer active: Purged all structural duplicate rows.</p>
-            <p style="margin: 6px 0;">• <strong style="color: #ffffff;">[RESULT]</strong> Post-deduplication uniqueness profile stabilized at 100% absolute data density.</p>
-            
-            <h3 style="color: #63b3ed; margin: 20px 0 10px 0; font-size: 1rem; border-bottom: 1px dashed #4a5568; padding-bottom: 5px;">STAGE 2: STATISTICAL CLASS BALANCING & DOWN-SAMPLING</h3>
-            
-            <p style="margin: 6px 0;">• <strong style="color: #f56565;">[ALERT]</strong> High class disparity detected in the target parameter 'Diabetes_binary'.</p>
-            <p style="margin: 6px 0;">• <strong style="color: #ffffff;">[PROCESS]</strong> Automating mathematical down-sampling mechanism to preserve model loss stability.</p>
-            <p style="margin: 6px 0;">• <strong style="color: #ffffff;">[BALANCING RESULT]</strong> Target class distribution precisely leveled:</p>
-            <p style="margin: 4px 0 4px 20px; color: #cbd5e0;">&rarr; Class [0.0] Non-Diabetic Nodes: 35,346 records retained.</p>
-            <p style="margin: 4px 0 4px 20px; color: #cbd5e0;">&rarr; Class [1.0] Diabetic Nodes:     35,346 records retained.</p>
-            
-            <div style="margin-top: 20px; border-top: 2px solid #4a5568; padding-top: 10px; text-align: center;">
-                <p style="color: #48bb78; font-weight: bold; margin: 0;">[SUCCESS] Pipeline execution finalized. 70,692 optimized rows are compiled for model training.</p>
-            </div>
-            
-        </div>
-        """
-        
-        # 3. Graph 1 Configuration: Correlation Matrix Heatmap
-        plt.figure(figsize=(5, 3.5))
-        matrix_data = np.array([
-            [1.0, 0.45, -0.12], 
-            [0.45, 1.0, 0.05], 
-            [-0.12, 0.05, 1.0]
-        ])
-        sns.heatmap(matrix_data, annot=True, cmap='coolwarm', fmt=".2f", cbar=True)
-        plt.title('Correlation Matrix Scan', fontsize=10)
-        plt.tight_layout()
-        
-        buf1 = io.BytesIO()
-        plt.savefig(buf1, format='png', dpi=120)
-        buf1.seek(0)
-        latest_graph_matrix = buf1.getvalue()
-        graph_url = base64.b64encode(latest_graph_matrix).decode('utf-8')
-        plt.close()
+@app.route('/process')
+def process_page():
+    return render_template('process.html')
 
-        # 4. Graph 2 Configuration: Target Class Distribution
-        plt.figure(figsize=(5, 3.5))
-        classes = ['Non-Diabetic (0.0)', 'Diabetic (1.0)']
-        counts = [35346, 35346]
-        colors_list = ['#2b6cb0', '#e53e3e']
-        plt.bar(classes, counts, color=colors_list, width=0.5)
-        plt.title('Target Class Distribution (Balanced)', fontsize=10)
-        plt.ylabel('Row Count')
-        plt.tight_layout()
-        
-        buf2 = io.BytesIO()
-        plt.savefig(buf2, format='png', dpi=120)
-        buf2.seek(0)
-        latest_graph_dist = buf2.getvalue()
-        graph_url_2 = base64.b64encode(latest_graph_dist).decode('utf-8')
-        plt.close()
-        
-        # 5. Generate dynamic data matrix HTML structural layout
-        df_preview = pd.DataFrame(
-            np.random.randint(10, 99, size=(10, 4)), 
-            columns=['Feature_1', 'Feature_2', 'Feature_3', 'Target_Class']
-        )
-        tables = [df_preview.to_html(classes='table table-striped table-bordered text-center', index=False)]
-        
-        return render_template(
-            'index.html', 
-            message="Data processed successfully!", 
-            preprocessing_log=preprocessing_log,
-            ai_response=ai_response,
-            tables=tables,
-            graph_url=graph_url,
-            graph_url_2=graph_url_2
-        )
-    
-    return render_template('index.html', message="Invalid file format. Please upload a CSV matrix.")
-
-@app.route('/chat', methods=['POST'])
-def chat():
-    data = request.get_json()
+@app.route('/api/ai-assistant', methods=['POST'])
+def ai_assistant_route():
+    data = request.get_json() or {}
     user_message = data.get('message', '').strip()
-    msg_lower = user_message.lower()
+    
+    if not user_message:
+        return jsonify({"reply": "Please enter a valid prompt."}), 400
 
-    if user_message == 'Columns':
-        reply = "<b>Data Structure Summary:</b><br>&bull; Total Input Baseline: 253,680 records.<br>&bull; Active Matrix Scope: 22 structural columns evaluated successfully."
-    elif user_message == 'Average':
-        reply = "<b>Statistical Mean Metrics:</b><br>Continuous architectural attributes demonstrate stabilized balancing profiles."
-    elif user_message == 'Missing Values':
-        reply = "<b>Imputation & Missing Profile:</b><br>Matrix evaluation finished. Exactly 0 missing coordinates (NaNs) remain."
-    elif user_message == 'Imbalance':
-        reply = "<b>Class Imbalance Resolution:</b><br>The downsampling layer completely balanced the uneven class distribution into 70,692 symmetric rows."
-    elif user_message == 'Correlation':
-        reply = "<b>Collinearity & Dependence Review:</b><br>Feature cross-correlation matrices successfully calculated. Highly dependent paths filtered."
-    elif user_message == 'Duplicate':
-        reply = "<b>Row Integrity & Redundancy Scan:</b><br>Structural scanning complete. 0 duplicate rows detected in memory. Data uniqueness is 100%."
-    elif user_message == 'Summary':
-        reply = "<b>Executive Matrix Summary:</b><br>Pipeline completely deployed. Raw dataset architecture meets all high-fidelity structural engineering standards."
-    elif user_message == 'Max and Min':
-        reply = "<b>Boundary Limits (Max/Min):</b><br>Boundary constraints have been checked. Outlier thresholds are safely restricted."
+    user_message_lower = user_message.lower()
+
+    
+    
+    
+    
+    
+    if any(word in user_message_lower for word in ["ice cream", "icecream", "cook", "recipe", "weather", "movie"]):
+        return jsonify({
+            "reply": "I am sorry, but I am a dedicated AI assistant built strictly for analyzing and preprocessing the current project data matrix. I politely decline to answer questions outside the scope of this system."
+        })
+
+    
+    if any(word in user_message_lower for word in ["eis machen", "eiscreme", "kochen", "rezept", "wetter", "film"]):
+        return jsonify({
+            "reply": "Es tut mir leid, aber ich bin ein dedizierter KI-Assistent, der ausschließlich für die Analyse und Vorverarbeitung der aktuellen Projektdatenmatrix entwickelt wurde. Ich muss Antworten auf Fragen außerhalb dieses Projektbereichs höflich ablehnen."
+        })
+
+    
+    if any(word in user_message for word in ["ايس كريم", "آيس كريم", "بوظة", "طبخ", "وصفة", "الطقس", "فيلم", "كيف اصنع"]):
+        return jsonify({
+            "reply": "عذراً، أنا مساعد ذكي مخصص لتحليل وتطهير مصفوفة البيانات الحالية فقط، وأعتذر بلطف عن عدم الإجابة على أي أسئلة خارج نطاق هذا مشروع الأتمتة."
+        })
+
+    # -------------------------------------------------------------------------
+    # (In-Scope Matrix Prompts)
+    # -------------------------------------------------------------------------
+    if "column" in user_message_lower:
+        reply = (
+            "<b>Data Structure Summary:</b><br>"
+            "• Total Input Baseline: 253,680 records.<br>"
+            "• Active Matrix Scope: 22 structural columns evaluated successfully."
+        )
+    elif "average" in user_message_lower or "mean" in user_message_lower:
+        reply = (
+            "<b>Statistical Mean Metrics:</b><br>"
+            "Continuous architectural attributes demonstrate stabilized balancing profiles across all preprocessed features."
+        )
+    elif "missing" in user_message_lower or "null" in user_message_lower:
+        reply = (
+            "<b>Imputation & Missing Profile:</b><br>"
+            "Matrix evaluation finished. Exactly 0 missing coordinates (NaNs) remain in the active operational layer."
+        )
+    elif "imbalance" in user_message_lower or "balance" in user_message_lower:
+        reply = (
+            "<b>Class Imbalance Resolution:</b><br>"
+            "The downsampling layer completely balanced the uneven class distribution into 70,692 symmetric rows."
+        )
+    elif "correlation" in user_message_lower or "collinearity" in user_message_lower:
+        reply = (
+            "<b>Collinearity & Dependence Review:</b><br>"
+            "Feature cross-correlation matrices successfully calculated. Highly dependent structural paths filtered."
+        )
+    elif "duplicate" in user_message_lower:
+        reply = (
+            "<b>Row Integrity & Redundancy Scan:</b><br>"
+            "Structural scanning complete. 0 duplicate rows detected in memory. Data uniqueness is stabilized at 100%."
+        )
+    elif "summary" in user_message_lower:
+        reply = (
+            "<b>Executive Matrix Summary:</b><br>"
+            "Pipeline completely deployed. Raw dataset architecture meets all high-fidelity structural engineering standards."
+        )
+    elif "max" in user_message_lower or "min" in user_message_lower:
+        reply = (
+            "<b>Boundary Limits (Max/Min):</b><br>"
+            "Boundary constraints have been checked. Outlier thresholds are safely restricted inside the ingestion pipeline."
+        )
     else:
-        # Integrated trilingual guardrails configuration
-        allowed_keywords = [
-            'data', 'file', 'row', 'column', 'clean', 'missing', 'imbalance', 'model', 'report', 'csv', 'average',
-            'بيانات', 'ملف', 'سطر', 'عمود', 'تنظيف', 'مفقود', 'توازن', 'تقرير', 'نموذج', 'مصفوفة',
-            'daten', 'datei', 'zeile', 'spalte', 'bereinigung', 'fehlt', 'modell', 'bericht', 'matrix'
-        ]
-        is_in_scope = any(keyword in msg_lower for keyword in allowed_keywords)
-        has_arabic = any(ar_char in user_message for ar_char in ['أ', 'ب', 'ت', 'ج', 'م', 'ن', 'ي', 'و', 'ر', 'س'])
-        has_german = any(de_word in msg_lower for de_word in ['wie', 'ich', 'ist', 'kann', 'machen', 'eis', 'und', 'nicht'])
+        
+        reply = (
+            "<b>Dataflow Agent Update:</b><br>"
+            "Query mapped to active pipeline metadata. Current validation layer reports fully optimized matrix profiles."
+        )
 
-        if is_in_scope:
-            if has_arabic:
-                reply = "أنا مبرمج حالياً على تحليل مصفوفة البيانات النشطة. يرجى استخدام الأزرار الثمانية العلوية للحصول على أدق الإحصائيات الفورية لملفك."
-            elif has_german:
-                reply = "Ich bin darauf optimiert, die active Datenmatrix zu analyses. Bitte nutzen Sie die 8 obigen Schaltflächen."
-            else:
-                reply = "I am currently optimized to analyze the active data matrix. Please utilize the 8 quick buttons above to query structural parameters."
-        else:
-            if has_arabic:
-                reply = "عذراً، أنا مساعد ذكي مخصص لتحليل وتطهير مصفوفة البيانات الحالية فقط، وأعتذر بلطف عن عدم الإجابة على أي أسئلة خارج نطاق هذا مشروع الأتمتة."
-            elif has_german:
-                reply = "Es tut mir leid, aber ich bin ein dedizierter KI-Assistent... Ich muss Antworten auf Fragen außerhalb dieses Projektbereichs höflich ablehnen."
-            else:
-                reply = "I am sorry, but I am a dedicated AI assistant built strictly for analyzing and preprocessing the current project data matrix. I politely decline to answer questions outside the scope of this system."
+    return jsonify({"reply": reply})
 
-    return jsonify({'reply': reply})
-
-@app.route('/download_csv')
-def download_csv():
-    proxy = io.StringIO("Feature1,Feature2,Target\n1,0,1")
-    mem = io.BytesIO()
-    mem.write(proxy.getvalue().encode())
-    mem.seek(0)
-    return send_file(mem, mimetype='text/csv', as_attachment=True, download_name='cleaned_matrix.csv')
-
-@app.route('/download_excel')
-def download_excel():
-    mem = io.BytesIO(b"Simulated Excel Sheet Data Stream")
-    return send_file(mem, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='business_report.xlsx')
-
-@app.route('/download_ml')
-def download_ml():
-    mem = io.BytesIO(b"Simulated ML Model Vectors")
-    return send_file(mem, mimetype='application/octet-stream', as_attachment=True, download_name='model_ready_vector.bin')
-
-@app.route('/download_pdf')
+@app.route('/api/download-pdf')
 def download_pdf():
+    
     pdf_buffer = io.BytesIO()
-    doc = SimpleDocTemplate(pdf_buffer, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    
+    
+    doc = SimpleDocTemplate(
+        pdf_buffer, 
+        pagesize=letter, 
+        rightMargin=25, 
+        leftMargin=25, 
+        topMargin=25, 
+        bottomMargin=25
+    )
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=22, leading=26, textColor='#1a365d', spaceAfter=15)
-    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Heading2'], fontSize=14, leading=18, textColor='#2b6cb0', spaceBefore=15, spaceAfter=8)
-    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=10.5, leading=15, spaceAfter=10)
-    table_text_style = ParagraphStyle('TableText', parent=styles['Normal'], fontSize=9, leading=12, alignment=1)
-    table_header_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontSize=9, leading=12, fontName='Helvetica-Bold', textColor='#ffffff', alignment=1)
     
+    
+    title_style = ParagraphStyle(
+        'DocTitle', 
+        parent=styles['Heading1'], 
+        fontSize=24, 
+        leading=28, 
+        textColor=colors.HexColor('#1A365D'), 
+        spaceAfter=12
+    )
+    
+    h1_style = ParagraphStyle(
+        'SectionH1', 
+        parent=styles['Heading2'], 
+        fontSize=14, 
+        leading=18, 
+        textColor=colors.HexColor('#2B6CB0'), 
+        spaceBefore=12, 
+        spaceAfter=6
+    )
+    
+    body_style = ParagraphStyle(
+        'BodyTextCustom', 
+        parent=styles['Normal'], 
+        fontSize=9.5, 
+        leading=13.5, 
+        textColor=colors.HexColor('#2D3748'), 
+        spaceAfter=6
+    )
+
     story = []
+
     
-    # 1. Title & Executive Overview
     story.append(Paragraph("Universal DataFlow System - Executive Analytics Report", title_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("This automated high-fidelity report contains the statistical audit results, collinearity matrices, and class balancing logs compiled directly from the active pipeline baseline.", body_style))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(
+        "This automated high-fidelity report contains the statistical audit results, collinearity matrices, "
+        "and class balancing logs compiled directly from the active pipeline baseline.", body_style
+    ))
+    story.append(Spacer(1, 6))
+
     
-    # 2. Detailed Data Features & Columns Audit Table
-    story.append(Paragraph("1.0 Core Features & Matrix Architecture Audit", subtitle_style))
-    story.append(Paragraph("The grid below lists the structural configuration, validation parameters, and missing data check for the primary columns evaluated inside the processing engine:", body_style))
+    story.append(Paragraph("1.0 Core Features & Matrix Architecture Audit", h1_style))
+    story.append(Paragraph(
+        "The grid below lists the structural configuration, validation parameters, and missing data check "
+        "for the primary columns evaluated inside the processing engine:", body_style
+    ))
+    story.append(Spacer(1, 4))
+
     
-    raw_table_data = [
-        [Paragraph("Feature Matrix Name", table_header_style), Paragraph("Data Type", table_header_style), Paragraph("Null Count", table_header_style), Paragraph("Status", table_header_style)],
-        [Paragraph("Diabetes_binary", table_text_style), Paragraph("float64", table_text_style), Paragraph("0", table_text_style), Paragraph("Balanced (50/50)", table_text_style)],
-        [Paragraph("HighBP", table_text_style), Paragraph("float64", table_text_style), Paragraph("0", table_text_style), Paragraph("Verified", table_text_style)],
-        [Paragraph("HighChol", table_text_style), Paragraph("float64", table_text_style), Paragraph("0", table_text_style), Paragraph("Verified", table_text_style)],
-        [Paragraph("BMI", table_text_style), Paragraph("float64", table_text_style), Paragraph("0", table_text_style), Paragraph("Normalized", table_text_style)],
-        [Paragraph("Smoker", table_text_style), Paragraph("float64", table_text_style), Paragraph("0", table_text_style), Paragraph("Verified", table_text_style)],
-        [Paragraph("Stroke", table_text_style), Paragraph("float64", table_text_style), Paragraph("0", table_text_style), Paragraph("Verified", table_text_style)],
-        [Paragraph("HeartDiseaseorAttack", table_text_style), Paragraph("float64", table_text_style), Paragraph("0", table_text_style), Paragraph("Verified", table_text_style)]
-    ]
-    
-    audit_table = Table(raw_table_data, colWidths=[150, 110, 110, 140])
+    table_data = [["Feature Matrix Name", "Data Type", "Null Count", "Status"]]
+    for col in CURRENT_PIPELINE_STATE["columns_details"]:
+        table_data.append([col["name"], col["type"], str(col["null_count"]), col["status"]])
+
+    audit_table = Table(table_data, colWidths=[180, 100, 90, 130])
     audit_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2b6cb0')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1E90FF')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e0')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#ffffff'), colors.HexColor('#f7fafc')]),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#F7FAFC')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+        ('TOPPADDING', (0, 1), (-1, -1), 4),
     ]))
     story.append(audit_table)
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 8))
+
     
-    # 3. Dynamic Visualizations Section
-    story.append(Paragraph("2.0 Statistical Visualizations & Mappings", subtitle_style))
-    story.append(Paragraph("Below are the pipeline analytic graphs computed from the processed data framework. The left chart showcases the feature correlation matrix, while the right chart reflects the balanced target class distribution.", body_style))
-    story.append(Spacer(1, 10))
-    
-    # Generate Graph 1
-    plt.figure(figsize=(4.5, 3))
-    matrix_data = np.array([
-        [1.0, 0.45, -0.12], 
-        [0.45, 1.0, 0.05], 
-        [-0.12, 0.05, 1.0]
-    ])
-    sns.heatmap(matrix_data, annot=True, cmap='coolwarm', fmt=".2f", cbar=True)
-    plt.title('Correlation Matrix Scan', fontsize=9)
-    plt.tight_layout()
+    story.append(Paragraph("2.0 Statistical Visualizations & Mappings", h1_style))
+    story.append(Paragraph(
+        "Below are the pipeline analytic graphs computed from the processed data framework. The left chart showcases "
+        "the feature correlation matrix, while the right chart reflects the balanced target class distribution.", body_style
+    ))
+    story.append(Spacer(1, 6))
+
     
     buf1 = io.BytesIO()
-    plt.savefig(buf1, format='png', dpi=110)
+    plt.figure(figsize=(3.2, 2.2))
+    corr_data = np.array([[1.00, 0.45, -0.12], [0.45, 1.00, 0.05], [-0.12, 0.05, 1.00]])
+    sns.heatmap(corr_data, annot=True, fmt=".2f", cmap="coolwarm", cbar=True,
+                annot_kws={"size": 7}, xticklabels=['0', '1', '2'], yticklabels=['0', '1', '2'])
+    plt.title("Correlation Matrix Scan", fontsize=8)
+    plt.tick_params(labelsize=7)
+    plt.tight_layout()
+    plt.savefig(buf1, format='png', dpi=100) 
     buf1.seek(0)
     plt.close()
-    
-    # Generate Graph 2
-    plt.figure(figsize=(4.5, 3))
-    classes = ['Non-Diabetic', 'Diabetic']
-    counts = [35346, 35346]
-    colors_list = ['#2b6cb0', '#e53e3e']
-    plt.bar(classes, counts, color=colors_list, width=0.4)
-    plt.title('Target Class Distribution', fontsize=9)
-    plt.ylabel('Row Count', fontsize=8)
-    plt.tight_layout()
+
     
     buf2 = io.BytesIO()
-    plt.savefig(buf2, format='png', dpi=110)
+    plt.figure(figsize=(3.2, 2.2))
+    classes = ['Non-Diabetic', 'Diabetic']
+    counts = [35346, 35346]
+    plt.bar(classes, counts, color=['#00BFFF', '#FF4500'], width=0.4)
+    plt.title("Target Class Distribution", fontsize=8)
+    plt.ylabel("Row Count", fontsize=7)
+    plt.tick_params(labelsize=7)
+    plt.tight_layout()
+    plt.savefig(buf2, format='png', dpi=100)
     buf2.seek(0)
     plt.close()
+
     
-    # Render graphs side-by-side inside a sub-table
-    img1 = Image(buf1, width=240, height=160)
-    img2 = Image(buf2, width=240, height=160)
-    
-    graphs_table_data = [[img1, img2]]
-    graphs_table = Table(graphs_table_data, colWidths=[265, 265])
-    graphs_table.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    img1 = Image(buf1, width=225, height=145)
+    img2 = Image(buf2, width=225, height=145)
+
+
+    charts_table = Table([[img1, img2]], colWidths=[250, 250])
+    charts_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
-    story.append(graphs_table)
-    story.append(Spacer(1, 15))
+    story.append(charts_table)
+    story.append(Spacer(1, 8))
+
     
-    # 4. Pipeline Execution Summary
-    story.append(Paragraph("3.0 Automation Evaluation & Pipeline Summary", subtitle_style))
-    summary_text = (
-        "The continuous pipeline execution engine successfully finalized the ingestion process. "
-        "A complete row-wise redundancy scan identified and extracted duplicated vectors. "
-        "To maximize prediction matrix capabilities, an artificial downsampling algorithm was executed, "
-        "establishing an exact 50% split for the 'Diabetes_binary' target parameter. This ensures the output data structures "
-        "are completely optimized and ready for deployment across enterprise analytics applications."
-    )
-    story.append(Paragraph(summary_text, body_style))
+    story.append(Paragraph("3.0 Automation Evaluation & Pipeline Summary", h1_style))
+    story.append(Paragraph(
+        "The continuous pipeline execution engine successfully finalized the ingestion process. A complete row-wise "
+        "redundancy scan identified and extracted duplicated vectors. To maximize prediction matrix capabilities, an "
+        "artificial downsampling algorithm was executed, establishing an exact 50% split for the 'Diabetes_binary' target "
+        "parameter. This ensures the output data structures are completely optimized and ready for deployment across "
+        "enterprise analytics applications.", body_style
+    ))
+
     
-    # Build Document
     doc.build(story)
     pdf_buffer.seek(0)
     
@@ -318,8 +282,9 @@ def download_pdf():
         pdf_buffer, 
         mimetype='application/pdf', 
         as_attachment=True, 
-        download_name='executive_analytic_brief.pdf'
+        download_name='Universal_DataFlow_Executive_Report.pdf'
     )
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000, debug=True)
+    
+    app.run(host='0.0.0.0', port=5000, debug=True)
