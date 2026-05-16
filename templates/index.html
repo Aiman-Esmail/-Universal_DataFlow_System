@@ -18,12 +18,12 @@
         .btn-custom { background-color: #2b6cb0; color: white; border-radius: 6px; padding: 10px 24px; font-weight: 500; transition: all 0.2s; }
         .btn-custom:hover { background-color: #1a365d; color: white; }
         
-        /* تصميم الأزرار الثمانية الجديد والواضح جداً */
+        /* Analysis grid interface setup */
         .chat-btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .quick-analysis-btn { background-color: #e2e8f0; color: #1a202c; border: 1px solid #cbd5e0; border-radius: 8px; padding: 12px 15px; font-size: 14px; font-weight: 600; text-align: center; transition: all 0.2s; cursor: pointer; }
         .quick-analysis-btn:hover { background-color: #2b6cb0; color: white; border-color: #2b6cb0; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
-        /* تنسيق فقاعات الشات الظاهرة في الصورة */
+        /* Chat view adjustments */
         .chat-bubble-user { background-color: #bee3f8; color: #2c5282; border-radius: 15px 15px 0 15px; padding: 12px 18px; margin-bottom: 15px; max-width: 80%; margin-left: auto; font-weight: 500; text-align: right; }
         .chat-bubble-ai { background-color: #2d3748; color: #edf2f7; border-radius: 15px 15px 15px 0; padding: 15px 20px; margin-bottom: 15px; max-width: 85%; font-size: 15px; line-height: 1.6; }
     </style>
@@ -58,15 +58,25 @@
         <div class="card">
             <div class="card-body p-0">
                 <ul class="nav nav-tabs px-4 pt-3" id="dashboardTabs" role="tablist">
-                    <li class="nav-item"><button class="nav-link active" id="prep-tab" data-bs-toggle="tab" data-bs-target="#prep" type="button" role="tab">Preprocessing</button></li>
-                    <li class="nav-item"><button class="nav-link" id="viz-tab" data-bs-toggle="tab" data-bs-target="#viz" type="button" role="tab">Visualizations</button></li>
-                    <li class="nav-item"><button class="nav-link" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab">Data Preview</button></li>
-                    <li class="nav-item"><button class="nav-link" id="download-tab" data-bs-toggle="tab" data-bs-target="#download" type="button" role="tab">Downloads</button></li>
-                    <li class="nav-item"><button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat-panel" type="button" role="tab"><i class="fa-solid fa-robot me-1"></i>AI Assistant</button></li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="prep-tab" data-bs-toggle="tab" data-bs-target="#prep" type="button" role="tab" aria-controls="prep" aria-selected="true">Preprocessing</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="viz-tab" data-bs-toggle="tab" data-bs-target="#viz" type="button" role="tab" aria-controls="viz" aria-selected="false">Visualizations</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-controls="preview" aria-selected="false">Data Preview</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="download-tab" data-bs-toggle="tab" data-bs-target="#download" type="button" role="tab" aria-controls="download" aria-selected="false">Downloads</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat-panel" type="button" role="tab" aria-controls="chat-panel" aria-selected="false"><i class="fa-solid fa-robot me-1"></i>AI Assistant</button>
+                    </li>
                 </ul>
 
                 <div class="tab-content p-4" id="dashboardTabsContent">
-                    <div class="tab-pane fade show active" id="prep" role="tabpanel">
+                    <div class="tab-pane fade show active" id="prep" role="tabpanel" aria-labelledby="prep-tab">
                         <h5 class="fw-bold mb-3" style="color: #2d3748;">Steps Applied Automatically:</h5>
                         <div class="mb-4">
                             {% if preprocessing_log %}
@@ -85,31 +95,37 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="viz" role="tabpanel">
+                    <div class="tab-pane fade" id="viz" role="tabpanel" aria-labelledby="viz-tab">
                         <h5 class="fw-bold mb-3" style="color: #2d3748;">Statistical Data Visualizations</h5>
-                        <p class="text-muted">{{ viz_response }}</p>
-                        <div class="row g-4 mt-2">
-                            {% for title, url in charts %}
-                                <div class="col-md-6 text-center">
-                                    <div class="p-3 bg-light border rounded-3">
-                                        <h6 class="fw-bold text-secondary mb-3">{{ title }}</h6>
-                                        <img src="{{ url }}" class="img-fluid rounded" alt="{{ title }}">
-                                    </div>
+                        <p class="text-muted">Below is the linear dependence matrix mapped against baseline numerical features:</p>
+                        <div class="row g-4 mt-2 justify-content-center">
+                            <div class="col-md-8 text-center">
+                                <div class="p-3 bg-white border rounded-3 shadow-sm">
+                                    <h6 class="fw-bold text-secondary mb-3">Correlation Matrix Heatmap</h6>
+                                    {% if graph_url %}
+                                        <img src="data:image/png;base64,{{ graph_url }}" class="img-fluid rounded shadow-sm" alt="Active Correlation Matrix Scan">
+                                    {% else %}
+                                        <div class="p-5 text-muted bg-light border rounded"><i class="fa-solid fa-chart-line me-2 fs-4"></i>Visualization matrix buffer empty.</div>
+                                    {% endif %}
                                 </div>
-                            {% endfor %}
+                            </div>
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="preview" role="tabpanel">
+                    <div class="tab-pane fade" id="preview" role="tabpanel" aria-labelledby="preview-tab">
                         <h5 class="fw-bold mb-3" style="color: #2d3748;">Baseline High-Fidelity Preview (Top 10 Records)</h5>
-                        <div class="table-responsive rounded border">
-                            {% for table in tables %}
-                                {{ table | safe }}
-                            {% endfor %}
+                        <div class="table-responsive rounded border bg-white">
+                            {% if tables %}
+                                {% for table in tables %}
+                                    {{ table | safe }}
+                                {% endfor %}
+                            {% else %}
+                                <div class="p-4 text-muted text-center">No active record preview loaded.</div>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="download" role="tabpanel">
+                    <div class="tab-pane fade" id="download" role="tabpanel" aria-labelledby="download-tab">
                         <h5 class="fw-bold mb-4" style="color: #2d3748;">Export System Processed Architecture Documents:</h5>
                         <div class="list-group shadow-sm">
                             <a href="/download_csv" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
@@ -131,7 +147,7 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="chat-panel" role="tabpanel">
+                    <div class="tab-pane fade" id="chat-panel" role="tabpanel" aria-labelledby="chat-tab">
                         <h5 class="fw-bold mb-3" style="color: #2d3748;">Ask anything about your data:</h5>
                         
                         <div class="chat-btn-grid">
@@ -168,6 +184,18 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Force fully explicit vanilla Bootstrap Tab listeners to keep containers linked properly
+        document.addEventListener("DOMContentLoaded", function() {
+            var triggerElList = [].slice.call(document.querySelectorAll('#dashboardTabs button'))
+            triggerElList.forEach(function (triggerEl) {
+                var tabTrigger = new bootstrap.Tab(triggerEl)
+                triggerEl.addEventListener('click', function (event) {
+                    event.preventDefault()
+                    tabTrigger.show()
+                })
+            })
+        });
+
         function sendQuickQuery(parameter) {
             appendUserBubble(parameter);
             fetchAIResponse(parameter);
