@@ -12,7 +12,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-# 1. Define the Flask applications and configurations first
+# 1. Define the Flask application and configurations
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_for_universal_dataflow'
 
@@ -216,6 +216,7 @@ def chat():
                 return jsonify({'reply': 'Sorry, I am an AI assistant specialized only in analyzing and preprocessing the current data matrix. I cannot answer out-of-scope questions.'})
 
         # 4. Rule-based analytical chatbot routing (Trilingual Support)
+        # Missing Values
         if any(w in user_message for w in ['missing', 'null', 'مفقود', 'فارغ', 'fehlende', 'leere']):
             if is_arabic:
                 reply = "تمت معالجة جميع القيم المفقودة تلقائياً. الأعمدة الرقمية استخدمت الوسيط الحسابي، والأعمدة النصية استخدمت المنوال الشائع."
@@ -224,6 +225,7 @@ def chat():
             else:
                 reply = "All missing values have been automatically resolved. Numeric columns used median imputation, and categorical columns used mode fallback."
                 
+        # Class Imbalance
         elif any(w in user_message for w in ['imbalance', 'balance', 'توازن', 'ungleichgewicht']):
             if is_arabic:
                 reply = f"اكتملت عملية تحسين توازن الفئات المستهدفة ديناميكياً، مما أنتج مصفوفة جاهزة للنموذج تحتوي على {final_rows} صفاً."
@@ -232,6 +234,7 @@ def chat():
             else:
                 reply = f"Class distribution optimization completed. Balanced target parameters dynamically, resulting in a model-ready matrix of {final_rows} rows."
                 
+        # Correlation
         elif any(w in user_message for w in ['correlation', 'relation', 'ارتباط', 'علاقة', 'korrelation', 'beziehung']):
             if is_arabic:
                 reply = "تم رسم خريطة ارتباط الميزات بنجاح. تم فحص العلاقات الخطية العالية لضمان استقلالية البيانات المدخلة في النموذج."
@@ -240,6 +243,7 @@ def chat():
             else:
                 reply = "Feature dependencies mapped successfully. High collinearity metrics were checked against variance thresholds to ensure model input independence."
                 
+        # Duplicates
         elif any(w in user_message for w in ['duplicate', 'removed', 'مكرر', 'حذف', 'duplikate', 'gelöscht']):
             if is_arabic:
                 reply = f"تأكد نظام فحص البيانات من معالجة وحذف السجلات المكررة. البيانات الحالية فريدة تماماً بنسبة 100%."
@@ -248,6 +252,7 @@ def chat():
             else:
                 reply = f"Data auditing confirmed and processed duplicate records verification. System baseline dataset is fully unique."
                 
+        # Summary
         elif any(w in user_message for w in ['summary', 'done', 'ملخص', 'ماذا فعلت', 'zusammenfassung']):
             if is_arabic:
                 reply = f"ملخص العمل: تم تنظيف البيانات وموازنتها لتصبح {final_rows} صفاً صافياً وجاهزاً. تم حذف التكرار، تعبئة الفراغات، وموازنة الفئات بأمان."
@@ -256,6 +261,7 @@ def chat():
             else:
                 reply = f"Summary: Input dataset has been optimized down to {final_rows} clean balanced entries. Redundancies purged, voids imputed seamlessly, and class distribution balanced safely."
                 
+        # Averages / Means
         elif any(w in user_message for w in ['average', 'mean', 'متوسط', 'معدل', 'durchschnitt']):
             numeric_df = df.select_dtypes(include=[np.number])
             if not numeric_df.empty:
@@ -274,6 +280,7 @@ def chat():
                 else:
                     reply = "No computational numeric columns available to compute averages."
                     
+        # Max / Min Boundaries
         elif any(w in user_message for w in ['max', 'min', 'أعلى', 'أقل', 'maximum', 'minimum']):
             numeric_df = df.select_dtypes(include=[np.number])
             if not numeric_df.empty:
@@ -293,11 +300,12 @@ def chat():
                 else:
                     reply = "No computational numeric columns available to extract boundaries."
                     
+        # Columns / Features Info
         elif any(w in user_message for w in ['columns', 'features', 'أعمدة', 'خصائص', 'spalten', 'merkmale']):
             if is_arabic:
                 reply = f"تحتوي بياناتك على {len(df.columns)} عموداً نشطاً وهي: {', '.join(df.columns.tolist())}."
             elif is_german:
-                reply = f"Ihr Datensatz besitzt strukturell {len(df.columns)} active Spalten: {', '.join(df.columns.tolist())}."
+                reply = f"Ihr Datensatz besitzt strukturell {len(df.columns)} aktive Spalten: {', '.join(df.columns.tolist())}."
             else:
                 reply = f"Your dataset structurally possesses {len(df.columns)} active attributes: {', '.join(df.columns.tolist())}."
                 
