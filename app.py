@@ -177,9 +177,15 @@ def chat():
     # Securely fallback to standard path if session variable drops
     file_path = session.get('cleaned_file_path', os.path.join(UPLOAD_FOLDER, 'latest_cleaned_data.csv'))
     
-    # 1. Detect User Language
+    # 1. Enhanced Language Detection
     is_arabic = any(char in user_message for char in 'أبتثجحخدذرزسشصضطظعغفقكلمنهويإآةى')
-    is_german = any(word in user_message for word in ['was', 'wie', 'viele', 'spalten', 'zeilen', 'durchschnitt', 'wert', 'duplikate', 'fehlende', 'zusammenfassung', 'korrelation'])
+    
+    # Expanded German keywords including common verbs and pronouns (hast, du, das, ist, sind, behoben, etc.)
+    german_keywords = [
+        'was', 'wie', 'viele', 'spalten', 'zeilen', 'durchschnitt', 'wert', 'duplikate', 'fehlende', 
+        'zusammenfassung', 'korrelation', 'hast', 'du', 'das', 'ist', 'sind', 'behoben', 'daten', 'analyse', 'bereinigt'
+    ]
+    is_german = any(word in user_message for word in german_keywords)
     
     # 2. Absolute check if the physical file exists on the server
     if not os.path.exists(file_path):
@@ -204,7 +210,7 @@ def chat():
             'missing', 'null', 'void', 'imbalance', 'balance', 'correlation', 'relation', 'duplicate', 
             'removed', 'summary', 'done', 'average', 'mean', 'max', 'min', 'columns', 'features', 'rows', 'size',
             'مفقود', 'فارغ', 'توازن', 'ارتباط', 'علاقة', 'مكرر', 'حذف', 'ملخص', 'متوسط', 'معدل', 'أعلى', 'أقل', 'أعمدة', 'خصائص', 'صفوف',
-            'fehlende', 'leere', 'ungleichgewicht', 'balance', 'korrelation', 'beziehung', 'duplikate', 'gelöscht', 'zusammenfassung', 'durchschnitt', 'maximum', 'minimum', 'spalten', 'merkmale', 'zeilen'
+            'fehlende', 'leere', 'ungleichgewicht', 'balance', 'korrelation', 'beziehung', 'duplikate', 'gelöscht', 'zusammenfassung', 'durchschnitt', 'maximum', 'minimum', 'spalten', 'merkmale', 'zeilen', 'behoben'
         ]
         
         if not any(keyword in user_message for keyword in scope_keywords):
@@ -225,12 +231,12 @@ def chat():
             else:
                 reply = "All missing values have been automatically resolved. Numeric columns used median imputation, and categorical columns used mode fallback."
                 
-        # Class Imbalance
-        elif any(w in user_message for w in ['imbalance', 'balance', 'توازن', 'ungleichgewicht']):
+        # Class Imbalance (Matches 'imbalance', 'balance', 'توازن', 'ungleichgewicht', 'behoben')
+        elif any(w in user_message for w in ['imbalance', 'balance', 'توازن', 'ungleichgewicht', 'behoben']):
             if is_arabic:
                 reply = f"اكتملت عملية تحسين توازن الفئات المستهدفة ديناميكياً، مما أنتج مصفوفة جاهزة للنموذج تحتوي على {final_rows} صفاً."
             elif is_german:
-                reply = f"Die Optimierung der Klassenverteilung wurde abgeschlossen. Die Zielparameter wurden dynamisch ausgeglichen, was zu einer modellbereiten Matrix von {final_rows} Zeilen führte."
+                reply = f"Die Optimierung der Klassenverteilung wurde erfolgreich abgeschlossen. Die Zielparameter wurden dynamisch ausgeglichen, was zu einer modellbereiten Matrix von {final_rows} Zeilen führte."
             else:
                 reply = f"Class distribution optimization completed. Balanced target parameters dynamically, resulting in a model-ready matrix of {final_rows} rows."
                 
