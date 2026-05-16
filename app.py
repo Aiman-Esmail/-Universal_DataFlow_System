@@ -11,7 +11,7 @@ from flask import Flask, render_template, request, jsonify, send_file
 
 # Import safe ReportLab modules to compile actual PDF file buffer stream
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 app = Flask(__name__)
@@ -148,7 +148,7 @@ def chat():
             if has_arabic:
                 reply = "عذراً، أنا مساعد ذكي مخصص لتحليل وتطهير مصفوفة البيانات الحالية فقط، وأعتذر بلطف عن عدم الإجابة على أي أسئلة خارج نطاق هذا مشروع الأتمتة."
             elif has_german:
-                reply = "Es tut mir leid, aber ich bin ein dedizierter KI-Assistent... Ich muss Antworten auf Fragen außerhalb dieses Projektbereichs höflich ablehnen."
+                reply = "Es tut mir leid, aber ich bin ein dedizierter KI-Assistent... Ich muss Antworten على الأسئلة خارج نطاق هذا المشروع بلطف."
             else:
                 reply = "I am sorry, but I am a dedicated AI assistant built strictly for analyzing and preprocessing the current project data matrix. I politely decline to answer questions outside the scope of this system."
 
@@ -174,64 +174,86 @@ def download_ml():
 
 @app.route('/download_pdf')
 def download_pdf():
-    # 1. Create an in-memory byte buffer for the PDF document
+    # 1. Initialize memory stream buffer with compressed margin bounds to force a single-page execution layout
     pdf_buffer = io.BytesIO()
-    doc = SimpleDocTemplate(pdf_buffer, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    doc = SimpleDocTemplate(pdf_buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=22, leading=26, textColor='#1a365d', spaceAfter=15)
-    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Heading2'], fontSize=14, leading=18, textColor='#2b6cb0', spaceBefore=12, spaceAfter=8)
-    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=11, leading=16, spaceAfter=10)
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=20, leading=24, textColor='#1a365d', spaceAfter=10)
+    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Heading2'], fontSize=12, leading=16, textColor='#2b6cb0', spaceBefore=8, spaceAfter=4)
+    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=10, leading=14, spaceAfter=8)
     
     story = []
     
-    # 2. Add Document Header Elements
+    # 2. Document Heading
     story.append(Paragraph("Universal DataFlow System - Executive Analytics Report", title_style))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 6))
     story.append(Paragraph("This automated high-fidelity report contains the statistical audit results, collinearity matrices, and class balancing logs compiled directly from the active pipeline baseline.", body_style))
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 10))
     
-    # 3. Generate and Inject Graph 1 (Correlation Heatmap) directly inside the PDF request
-    plt.figure(figsize=(5, 3.5))
+    # 3. Compile Graph 1 with optimized dimensions
+    plt.figure(figsize=(4.5, 2.5))
     matrix_data = np.array([
         [1.0, 0.45, -0.12], 
         [0.45, 1.0, 0.05], 
         [-0.12, 0.05, 1.0]
     ])
     sns.heatmap(matrix_data, annot=True, cmap='coolwarm', fmt=".2f", cbar=True)
-    plt.title('Correlation Matrix Scan', fontsize=10)
+    plt.title('Correlation Matrix Scan', fontsize=9)
     plt.tight_layout()
     
     buf1 = io.BytesIO()
-    plt.savefig(buf1, format='png', dpi=120)
+    plt.savefig(buf1, format='png', dpi=110)
     buf1.seek(0)
-    
-    story.append(Paragraph("1.0 Feature Collinearity Evaluation", subtitle_style))
-    story.append(Paragraph("The heatmap below displays the calculated Pearson correlation coefficients across the evaluated core matrix parameters to discover linear dependencies.", body_style))
-    story.append(Image(buf1, width=320, height=220))
-    story.append(Spacer(1, 20))
     plt.close()
     
-    # 4. Generate and Inject Graph 2 (Target Distribution) directly inside the PDF request
-    plt.figure(figsize=(5, 3.5))
+    # 4. Compile Graph 2 with optimized dimensions
+    plt.figure(figsize=(4.5, 2.5))
     classes = ['Non-Diabetic (0.0)', 'Diabetic (1.0)']
     counts = [35346, 35346]
     colors = ['#2b6cb0', '#e53e3e']
     plt.bar(classes, counts, color=colors, width=0.5)
-    plt.title('Target Class Distribution (Balanced)', fontsize=10)
-    plt.ylabel('Row Count')
+    plt.title('Target Class Distribution (Balanced)', fontsize=9)
+    plt.ylabel('Row Count', fontsize=8)
     plt.tight_layout()
     
     buf2 = io.BytesIO()
-    plt.savefig(buf2, format='png', dpi=120)
+    plt.savefig(buf2, format='png', dpi=110)
     buf2.seek(0)
-    
-    story.append(Paragraph("2.0 Symmetrical Target Class Balancing", subtitle_style))
-    story.append(Paragraph("The chart below illustrates the outcome of the automated downsampling layer, balancing the target vectors symmetrically into 70,692 model-ready records.", body_style))
-    story.append(Image(buf2, width=320, height=220))
     plt.close()
     
-    # 5. Build and compile the final document stream
+    # 5. Build side-by-side horizontal structure to safely lock items into a single page layout
+    img1 = Image(buf1, width=250, height=160)
+    img2 = Image(buf2, width=250, height=160)
+    
+    col1_content = [
+        Paragraph("<b>1.0 Feature Collinearity Evaluation</b>", subtitle_style),
+        Paragraph("The heatmap displays calculated Pearson correlation coefficients across core parameters to inspect system dependencies.", body_style),
+        Spacer(1, 4),
+        img1
+    ]
+    
+    col2_content = [
+        Paragraph("<b>2.0 Target Class Balancing</b>", subtitle_style),
+        Paragraph("The chart illustrates the downsampling output, balancing target vectors symmetrically into 70,692 rows.", body_style),
+        Spacer(1, 4),
+        img2
+    ]
+    
+    # Pack columns inside a container table to keep them fixed on page 1
+    table_data = [[col1_content, col2_content]]
+    container_table = Table(table_data, colWidths=[270, 270])
+    container_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 10),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+    ]))
+    
+    story.append(container_table)
+    
+    # 6. Build document stream bounds securely
     doc.build(story)
     pdf_buffer.seek(0)
     
