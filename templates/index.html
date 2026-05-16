@@ -18,12 +18,12 @@
         .btn-custom { background-color: #2b6cb0; color: white; border-radius: 6px; padding: 10px 24px; font-weight: 500; transition: all 0.2s; }
         .btn-custom:hover { background-color: #1a365d; color: white; }
         
-        /* Analysis grid interface setup */
+        /* 8 Quick Action Layout Configuration */
         .chat-btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .quick-analysis-btn { background-color: #e2e8f0; color: #1a202c; border: 1px solid #cbd5e0; border-radius: 8px; padding: 12px 15px; font-size: 14px; font-weight: 600; text-align: center; transition: all 0.2s; cursor: pointer; }
         .quick-analysis-btn:hover { background-color: #2b6cb0; color: white; border-color: #2b6cb0; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
-        /* Chat view adjustments */
+        /* Conversation Chat Bubbles Design */
         .chat-bubble-user { background-color: #bee3f8; color: #2c5282; border-radius: 15px 15px 0 15px; padding: 12px 18px; margin-bottom: 15px; max-width: 80%; margin-left: auto; font-weight: 500; text-align: right; }
         .chat-bubble-ai { background-color: #2d3748; color: #edf2f7; border-radius: 15px 15px 15px 0; padding: 15px 20px; margin-bottom: 15px; max-width: 85%; font-size: 15px; line-height: 1.6; }
     </style>
@@ -97,15 +97,25 @@
 
                     <div class="tab-pane fade" id="viz" role="tabpanel" aria-labelledby="viz-tab">
                         <h5 class="fw-bold mb-3" style="color: #2d3748;">Statistical Data Visualizations</h5>
-                        <p class="text-muted">Below is the linear dependence matrix mapped against baseline numerical features:</p>
+                        <p class="text-muted">Below are the dual pipeline analytic graphs processed from the baseline matrix:</p>
                         <div class="row g-4 mt-2 justify-content-center">
-                            <div class="col-md-8 text-center">
+                            <div class="col-md-6 text-center">
                                 <div class="p-3 bg-white border rounded-3 shadow-sm">
                                     <h6 class="fw-bold text-secondary mb-3">Correlation Matrix Heatmap</h6>
                                     {% if graph_url %}
-                                        <img src="data:image/png;base64,{{ graph_url }}" class="img-fluid rounded shadow-sm" alt="Active Correlation Matrix Scan">
+                                        <img src="data:image/png;base64,{{ graph_url }}" class="img-fluid rounded shadow-sm" alt="Correlation Matrix Map">
                                     {% else %}
-                                        <div class="p-5 text-muted bg-light border rounded"><i class="fa-solid fa-chart-line me-2 fs-4"></i>Visualization matrix buffer empty.</div>
+                                        <div class="p-4 text-muted bg-light border rounded">Correlation matrix buffer empty.</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-center">
+                                <div class="p-3 bg-white border rounded-3 shadow-sm">
+                                    <h6 class="fw-bold text-secondary mb-3">Target Class Distribution</h6>
+                                    {% if graph_url_2 %}
+                                        <img src="data:image/png;base64,{{ graph_url_2 }}" class="img-fluid rounded shadow-sm" alt="Target Balanced Distribution">
+                                    {% else %}
+                                        <div class="p-4 text-muted bg-light border rounded">Distribution matrix buffer empty.</div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -184,7 +194,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Force fully explicit vanilla Bootstrap Tab listeners to keep containers linked properly
+        // Synchronize Bootstrap Tab behaviors and triggers explicitly
         document.addEventListener("DOMContentLoaded", function() {
             var triggerElList = [].slice.call(document.querySelectorAll('#dashboardTabs button'))
             triggerElList.forEach(function (triggerEl) {
