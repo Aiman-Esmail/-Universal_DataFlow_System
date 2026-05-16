@@ -8,6 +8,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 from flask import Flask, render_template, request, send_file, jsonify
+from werkzeug.exceptions import RequestEntityTooLarge
 from groq import Groq
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.utils import resample
@@ -18,6 +19,8 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB
+
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 df_original = None
@@ -28,6 +31,11 @@ latest_viz_report = ""
 processing_summary = {}
 
 plt.rcParams['figure.max_open_warning'] = 0
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def file_too_large(e):
+    return render_template('index.html', message="Error: File too large. Maximum size is 100MB.")
 
 
 def clean_text(text):
