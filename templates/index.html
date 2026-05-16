@@ -179,14 +179,12 @@
 <body>
 <div class="container py-5">
 
-    <!-- Hero -->
     <div class="hero">
         <div class="hero-icon">🤖</div>
         <h1>Universal DataFlow System</h1>
         <p>Automated Data Cleaning, Balancing, Analysis and Visualization Platform</p>
     </div>
 
-    <!-- Upload -->
     <div class="card-custom">
         <div class="section-title">📂 Upload Your CSV File</div>
         <form action="/process" method="POST" enctype="multipart/form-data" id="uploadForm">
@@ -211,7 +209,6 @@
         </div>
     </div>
 
-    <!-- Message -->
     {% if message %}
     <div class="{% if 'Error' in message %}alert-error-custom{% else %}alert-success-custom{% endif %} mb-4">
         {% if 'Error' in message %}❌{% else %}✅{% endif %} {{ message }}
@@ -220,7 +217,6 @@
 
     {% if tables %}
 
-    <!-- Stats Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="stat-card">
@@ -248,7 +244,6 @@
         </div>
     </div>
 
-    <!-- Columns -->
     <div class="card-custom">
         <div class="section-title">🗂 Detected Columns</div>
         {% for col in columns %}
@@ -256,7 +251,6 @@
         {% endfor %}
     </div>
 
-    <!-- Main Tabs -->
     <div class="card-custom">
         <ul class="nav nav-tabs" id="mainTabs">
             <li class="nav-item">
@@ -288,7 +282,6 @@
 
         <div class="tab-content">
 
-            <!-- Preprocessing Tab -->
             <div class="tab-pane fade show active" id="preprocessingTab">
                 <h5 style="color:#1a1a2e; font-weight:700; margin-bottom:15px;">
                     Steps Applied Automatically:
@@ -300,7 +293,7 @@
                     </div>
                     {% endfor %}
                 {% else %}
-                    <div class="log-item">✅ Data was already clean — no issues found.</div>
+                    <div class="log-item">Composite Data clean — no issues found.</div>
                 {% endif %}
 
                 <h5 style="color:#1a1a2e; font-weight:700; margin:25px 0 15px;">
@@ -309,7 +302,6 @@
                 <div class="ai-report">{{ ai_response }}</div>
             </div>
 
-            <!-- Visualization Tab -->
             <div class="tab-pane fade" id="vizTab">
                 <h5 style="color:#1a1a2e; font-weight:700; margin-bottom:15px;">
                     AI Visualization Report:
@@ -331,7 +323,6 @@
                 </div>
             </div>
 
-            <!-- Data Preview Tab -->
             <div class="tab-pane fade" id="dataTab">
                 <h5 style="color:#1a1a2e; font-weight:700; margin-bottom:15px;">
                     Cleaned Data Preview (First 10 Rows):
@@ -341,7 +332,6 @@
                 </div>
             </div>
 
-            <!-- Downloads Tab -->
             <div class="tab-pane fade" id="downloadTab">
                 <h5 style="color:#1a1a2e; font-weight:700; margin-bottom:20px;">
                     Download Your Processed Data:
@@ -387,7 +377,6 @@
                 </div>
             </div>
 
-            <!-- Chatbot Tab -->
             <div class="tab-pane fade" id="chatTab">
                 <h5 style="color:#1a1a2e; font-weight:700; margin-bottom:15px;">
                     Ask anything about your data:
@@ -430,6 +419,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // عند تحميل الصفحة أو إعادة توجيه المستخدم إليها، يتم إخفاء الـ Spinner تلقائياً وإعادة تفعيل زر المعالجة
+    document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById('loading').style.display = 'none';
+        document.querySelector('.btn-process').disabled = false;
+    });
+
     function showFileName(input) {
         const name = input.files[0] ? input.files[0].name : '';
         document.getElementById('fileName').textContent = name ? '📄 Selected: ' + name : '';
@@ -439,6 +434,9 @@
         if (document.getElementById('fileInput').files[0]) {
             document.getElementById('loading').style.display = 'block';
             document.querySelector('.btn-process').disabled = true;
+            // إخفاء رسائل التنبيهات القديمة لتهيئة الواجهة لرفع جديد
+            const alertBox = document.querySelector('.alert-success-custom, .alert-error-custom');
+            if (alertBox) alertBox.style.display = 'none';
         }
     }
 
