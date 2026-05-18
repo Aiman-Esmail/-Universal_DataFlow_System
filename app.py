@@ -1,5 +1,10 @@
 import os
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')  # Essential for generating plots safely without GUI overhead on Render
+import matplotlib.pyplot as plt
+import io
+import base64
 from flask import Flask, render_template, request, redirect, url_for, session, send_file
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
@@ -27,6 +32,21 @@ ensure_upload_directory()
 def before_request():
     """Ensure upload directory exists before each request"""
     ensure_upload_directory()
+
+def get_clean_dataframe(file_path, filename):
+    """Helper to safely read and clean dataframe without infinite engine loops"""
+    if filename.endswith('.xlsx'):
+        df = pd.read_excel(file_path)
+    else:
+        try:
+            df = pd.read_csv(file_path, sep=',', encoding='utf-8')
+        except Exception:
+            df = pd.read_csv(file_path, sep=None, engine='python', encoding='utf-8-sig')
+    
+    # Automated Engineering Constraints
+    df = df.drop_duplicates()
+    df = df.dropna()
+    return df
 
 @app.route('/')
 def index():
@@ -61,39 +81,24 @@ def upload_file():
             return redirect(url_for('process_data'))
         except Exception as e:
             print(f"Error during file upload: {e}")
-            return render_template('index.html', error_message="Failed to upload file. Please try again.", ai_response=None, tables=None)
+            return render_template('index.html', error_message="Failed to upload file.", ai_response=None, tables=None)
     
     return redirect(url_for('index'))
 
 @app.route('/process_data')
 def process_data():
-    """Process uploaded data with robust engine fallback strategy to prevent freeze-loops"""
+    """Process uploaded data and generate layout dashboards"""
     filename = session.get('current_file')
-    
     if not filename:
         return redirect(url_for('index'))
     
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    
     if not os.path.exists(file_path):
         session.clear()
-        error_msg = "The uploaded file was lost due to server restart. Please upload your dataset again."
-        return render_template('index.html', error_message=error_msg, ai_response=None, tables=None)
+        return redirect(url_for('index'))
     
     try:
-        if filename.endswith('.xlsx'):
-            df = pd.read_excel(file_path)
-        else:
-            try:
-                # Optimized standard execution branch using ultra-fast C Engine to prevent server hang
-                df = pd.read_csv(file_path, sep=',', encoding='utf-8')
-            except Exception:
-                # Safe fallback configuration handling typical tab/semicolon matrix outputs safely
-                df = pd.read_csv(file_path, sep=None, engine='python', encoding='utf-8-sig')
-        
-        # Core Automated Engineering Constraints (Handling duplicates & outliers automatically)
-        df = df.drop_duplicates()
-        df = df.dropna()
+        df = get_clean_dataframe(file_path, filename)
         
         preprocessing_log = [
             "Missing values detected and eliminated dynamically via dropna().",
@@ -104,6 +109,18 @@ def process_data():
         message_success = f"Pipeline executed successfully! Cleaned matrix contains {df.shape[0]} records."
         ai_summary_report = "<b>System Analysis Complete.</b> The underlying data engine has normalized features, handled missing matrices, and purged duplicate records. Use the helper action tabs to query or download structures."
         
+        # Generate inline static plot for visualization tab injection
+        plt.figure(figsize=(6, 4))
+        df.iloc[:, :min(5, len(df.columns))].corr().plot(kind='box')
+        plt.title("Feature Distribution Constraints")
+        plt.tight_layout()
+        
+        img = io.BytesIO()
+        plt.savefig(img, format='png')
+        img.seek(0)
+        plot_url = base64.b64encode(img.getvalue()).decode('utf8')
+        plt.close()
+
         html_table = df.head(10).to_html(classes='table table-striped table-hover border text-center')
         
         return render_template(
@@ -112,64 +129,56 @@ def process_data():
             ai_response=ai_summary_report, 
             preprocessing_log=preprocessing_log,
             tables=[html_table],
-            filename=filename
+            filename=filename,
+            chart_url=plot_url
         )
         
-    except FileNotFoundError:
-        session.clear()
-        error_msg = "Dataset file not found. Please upload your file again."
-        return render_template('index.html', error_message=error_msg, ai_response=None, tables=None)
     except Exception as e:
         session.clear()
-        error_msg = "An error occurred while processing the file. Please try uploading again."
-        return render_template('index.html', error_message=error_msg, ai_response=None, tables=None)
+        return redirect(url_for('index'))
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    """Process chat requests with message validation"""
+@app.route('/download_csv')
+def download_csv():
+    """Dynamically generate and download the cleaned CSV structure"""
+    filename = session.get('current_file')
+    if not filename:
+        return "No active dataset", 400
+    
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     try:
-        data = request.get_json()
-        if not data:
-            return {"reply": "Invalid request format."}, 400
-        
-        user_message = data.get('message', '').strip()
-        if not user_message:
-            return {"reply": "Message cannot be empty."}, 400
-        
-        if user_message == "Missing Values":
-            reply = "<b>Agent Core Analysis:</b> Missing Value Layer executed. 100 percent of NaN/Null values have been cleared from the baseline dataset."
-        elif user_message == "Duplicate":
-            reply = "<b>Agent Core Analysis:</b> Duplicate check complete. All redundant rows have been automatically filtered and removed from the pipeline."
-        else:
-            reply = f"<b>Agent Core Update:</b> Parameter execution for '<i>{user_message}</i>' completed successfully. No extreme anomalies discovered in this matrix branch."
-        
-        return {"reply": reply}
+        df = get_clean_dataframe(file_path, filename)
+        out_path = os.path.join(app.config['UPLOAD_FOLDER'], 'Cleaned_Dataset.csv')
+        df.to_csv(out_path, index=False)
+        return send_file(out_path, as_attachment=True, download_name='Cleaned_Dataset.csv')
     except Exception as e:
-        return {"reply": "An error occurred processing your request. Please try again."}, 500
+        return str(e), 500
+
+@app.route('/download_xlsx')
+def download_xlsx():
+    """Dynamically generate and download the cleaned Excel structure"""
+    filename = session.get('current_file')
+    if not filename:
+        return "No active dataset", 400
+    
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    try:
+        df = get_clean_dataframe(file_path, filename)
+        out_path = os.path.join(app.config['UPLOAD_FOLDER'], 'Cleaned_Dataset.xlsx')
+        df.to_excel(out_path, index=False)
+        return send_file(out_path, as_attachment=True, download_name='Cleaned_Dataset.xlsx')
+    except Exception as e:
+        return str(e), 500
 
 @app.route('/download_pdf')
 def download_pdf():
     """Generate and download PDF report with safe file handling"""
     filename = session.get('current_file')
     if not filename:
-        return render_template('index.html', error_message="No active dataset found. Please upload a file first.", ai_response=None, tables=None), 400
+        return "No active dataset", 400
     
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if not os.path.exists(file_path):
-        session.clear()
-        return render_template('index.html', error_message="Dataset file was lost. Please upload your file again.", ai_response=None, tables=None), 400
-    
     try:
-        if filename.endswith('.xlsx'):
-            df = pd.read_excel(file_path)
-        else:
-            try:
-                df = pd.read_csv(file_path, sep=',', encoding='utf-8')
-            except Exception:
-                df = pd.read_csv(file_path, sep=None, engine='python', encoding='utf-8-sig')
-        
-        df = df.drop_duplicates()
-        df = df.dropna()
+        df = get_clean_dataframe(file_path, filename)
         
         pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], 'Dataset_Report.pdf')
         doc = SimpleDocTemplate(pdf_path, pagesize=letter)
@@ -193,7 +202,7 @@ def download_pdf():
         story.append(Paragraph("<b>Dataset Preview (Top 5 Rows):</b>", heading_style))
         story.append(Spacer(1, 10))
         
-        sub_df = df.iloc[:5, :6]
+        sub_df = df.iloc[:5, :min(6, len(df.columns))]
         table_data = [list(sub_df.columns)] + sub_df.values.tolist()
         table_data = [[str(item) for item in row] for row in table_data]
         
@@ -213,12 +222,26 @@ def download_pdf():
         doc.build(story)
         
         return send_file(pdf_path, as_attachment=True)
-        
-    except FileNotFoundError:
-        session.clear()
-        return render_template('index.html', error_message="Dataset file was lost. Please upload your file again.", ai_response=None, tables=None), 400
     except Exception as e:
-        return render_template('index.html', error_message="Error generating PDF. Please try again.", ai_response=None, tables=None), 500
+        return str(e), 500
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    """Process chat requests with message validation"""
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '').strip()
+        
+        if user_message == "Missing Values":
+            reply = "<b>Agent Core Analysis:</b> Missing Value Layer executed. 100 percent of NaN/Null values have been cleared from the baseline dataset."
+        elif user_message == "Duplicate":
+            reply = "<b>Agent Core Analysis:</b> Duplicate check complete. All redundant rows have been automatically filtered and removed from the pipeline."
+        else:
+            reply = f"<b>Agent Core Update:</b> Parameter execution for '<i>{user_message}</i>' completed successfully."
+        
+        return {"reply": reply}
+    except Exception:
+        return {"reply": "Error processed."}, 500
 
 @app.route('/clear')
 def clear():
@@ -226,5 +249,4 @@ def clear():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    # Keeps local live development active while safe parsing pipeline avoids connection timeouts
     app.run(debug=True)
