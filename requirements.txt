@@ -3,4 +3,3 @@ pandas
 reportlab
 openpyxl
 gunicorn
-matplotlib
