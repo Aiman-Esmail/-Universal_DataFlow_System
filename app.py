@@ -13,28 +13,26 @@ UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def ensure_upload_directory():
-    """Ensure upload directory exists - critical for Render ephemeral storage recovery"""
+    """Ensure upload directory exists across dynamic server restarts"""
     if not os.path.exists(UPLOAD_FOLDER):
         try:
             os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         except Exception as e:
             print(f"Warning: Could not create upload directory: {e}")
 
-# Initial directory creation
 ensure_upload_directory()
 
 @app.before_request
 def before_request():
-    """Ensure upload directory exists before each request"""
     ensure_upload_directory()
 
 def get_clean_dataframe(file_path, filename):
-    """Helper to safely read and clean dataframe without infinite engine loops"""
+    """Safely parse internal data structure without engine freezing loops"""
     if filename.endswith('.xlsx'):
         df = pd.read_excel(file_path)
     else:
         try:
-            # Using standard C engine with fallback for safe parsing
+            # Enforce C engine parse sequence to bypass localized Windows hang constraints
             df = pd.read_csv(file_path, sep=',', encoding='utf-8')
         except Exception:
             df = pd.read_csv(file_path, sep=None, engine='python', encoding='utf-8-sig')
@@ -46,7 +44,6 @@ def get_clean_dataframe(file_path, filename):
 
 @app.route('/')
 def index():
-    """Home page with session recovery for Render restarts"""
     filename = session.get('current_file')
     if filename:
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -58,7 +55,6 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    """Handle file upload with validation and directory recovery"""
     if 'file' not in request.files:
         return redirect(url_for('index'))
     
@@ -75,14 +71,13 @@ def upload_file():
             session['current_file'] = file.filename
             return redirect(url_for('process_data'))
         except Exception as e:
-            print(f"Error during file upload: {e}")
-            return render_template('index.html', error_message="Failed to upload file.", ai_response=None, tables=None)
+            print(f"Upload anomaly: {e}")
+            return render_template('index.html', error_message="Failed to process raw asset upload.", ai_response=None, tables=None)
     
     return redirect(url_for('index'))
 
 @app.route('/process_data')
 def process_data():
-    """Process uploaded data and generate layout dashboards"""
     filename = session.get('current_file')
     if not filename:
         return redirect(url_for('index'))
@@ -120,15 +115,13 @@ def process_data():
 
 @app.route('/download_csv')
 def download_csv():
-    """Dynamically generate and download the cleaned CSV using its original name structure"""
     filename = session.get('current_file')
     if not filename:
-        return "No active dataset", 400
+        return "No active dataset context found", 400
     
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     try:
         df = get_clean_dataframe(file_path, filename)
-        # Bypassing hardcoded path mismatches by streaming directly from memory safely
         out_path = os.path.join(app.config['UPLOAD_FOLDER'], f"cleaned_{filename}")
         df.to_csv(out_path, index=False)
         return send_file(out_path, as_attachment=True, download_name=f"cleaned_{filename}")
@@ -137,10 +130,9 @@ def download_csv():
 
 @app.route('/download_xlsx')
 def download_xlsx():
-    """Dynamically generate and download the cleaned Excel asset safely"""
     filename = session.get('current_file')
     if not filename:
-        return "No active dataset", 400
+        return "No active dataset context found", 400
     
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     try:
@@ -154,10 +146,9 @@ def download_xlsx():
 
 @app.route('/download_pdf')
 def download_pdf():
-    """Generate and download PDF report with safe layout elements"""
     filename = session.get('current_file')
     if not filename:
-        return "No active dataset", 400
+        return "No active dataset context found", 400
     
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     try:
@@ -210,7 +201,6 @@ def download_pdf():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """Process chat requests with message validation"""
     try:
         data = request.get_json()
         user_message = data.get('message', '').strip()
@@ -232,4 +222,5 @@ def clear():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Force stable local port execution without watchdog lockouts
+    app.run(debug=False)
