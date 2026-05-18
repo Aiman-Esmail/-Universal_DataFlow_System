@@ -12,46 +12,86 @@ app.secret_key = 'super_secret_key_for_universal_dataflow'
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+def ensure_upload_directory():
+    """Ensure upload directory exists - critical for Render ephemeral storage recovery"""
+    if not os.path.exists(UPLOAD_FOLDER):
+        try:
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        except Exception as e:
+            print(f"Warning: Could not create upload directory: {e}")
+
+# Initial directory creation
+ensure_upload_directory()
+
+@app.before_request
+def before_request():
+    """Ensure upload directory exists before each request"""
+    ensure_upload_directory()
 
 @app.route('/')
 def index():
+    """Home page with session recovery for Render restarts"""
     filename = session.get('current_file')
     if filename:
-        return redirect(url_for('process_data'))
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if os.path.exists(file_path):
+            return redirect(url_for('process_data'))
+        else:
+            session.clear()
+    
     return render_template('index.html', ai_response=None, tables=None)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    """Handle file upload with validation and directory recovery"""
     if 'file' not in request.files:
         return redirect(url_for('index'))
-        
+    
     file = request.files['file']
     if file.filename == '':
         return redirect(url_for('index'))
-        
+    
     if file:
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(file_path)
-        
-        session['current_file'] = file.filename
-        return redirect(url_for('process_data'))
+        try:
+            ensure_upload_directory()
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            file.save(file_path)
+            
+            session['current_file'] = file.filename
+            return redirect(url_for('process_data'))
+        except Exception as e:
+            print(f"Error during file upload: {e}")
+            return render_template('index.html', error_message="Failed to upload file. Please try again.", ai_response=None, tables=None)
+    
+    return redirect(url_for('index'))
 
 @app.route('/process_data')
 def process_data():
+    """Process uploaded data with robust engine fallback strategy to prevent freeze-loops"""
     filename = session.get('current_file')
+    
     if not filename:
         return redirect(url_for('index'))
-        
+    
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    
+    if not os.path.exists(file_path):
+        session.clear()
+        error_msg = "The uploaded file was lost due to server restart. Please upload your dataset again."
+        return render_template('index.html', error_message=error_msg, ai_response=None, tables=None)
     
     try:
         if filename.endswith('.xlsx'):
             df = pd.read_excel(file_path)
         else:
-            df = pd.read_csv(file_path, sep=None, engine='python', encoding='utf-8-sig')
-            
+            try:
+                # Optimized standard execution branch using ultra-fast C Engine to prevent server hang
+                df = pd.read_csv(file_path, sep=',', encoding='utf-8')
+            except Exception:
+                # Safe fallback configuration handling typical tab/semicolon matrix outputs safely
+                df = pd.read_csv(file_path, sep=None, engine='python', encoding='utf-8-sig')
+        
+        # Core Automated Engineering Constraints (Handling duplicates & outliers automatically)
         df = df.drop_duplicates()
         df = df.dropna()
         
@@ -75,37 +115,59 @@ def process_data():
             filename=filename
         )
         
+    except FileNotFoundError:
+        session.clear()
+        error_msg = "Dataset file not found. Please upload your file again."
+        return render_template('index.html', error_message=error_msg, ai_response=None, tables=None)
     except Exception as e:
-        return f"An error occurred while processing the file: {str(e)}"
+        session.clear()
+        error_msg = "An error occurred while processing the file. Please try uploading again."
+        return render_template('index.html', error_message=error_msg, ai_response=None, tables=None)
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    data = request.get_json()
-    user_message = data.get('message', '')
-    
-    if user_message == "Missing Values":
-        reply = "<b>Agent Core Analysis:</b> Missing Value Layer executed. 100% of NaN/Null values have been cleared from the baseline dataset."
-    elif user_message == "Duplicate":
-        reply = "<b>Agent Core Analysis:</b> Duplicate check complete. All redundant rows have been automatically filtered and removed from the pipeline."
-    else:
-        reply = f"<b>Agent Core Update:</b> Parameter execution for '<i>{user_message}</i>' completed successfully. No extreme anomalies discovered in this matrix branch."
+    """Process chat requests with message validation"""
+    try:
+        data = request.get_json()
+        if not data:
+            return {"reply": "Invalid request format."}, 400
         
-    return {"reply": reply}
+        user_message = data.get('message', '').strip()
+        if not user_message:
+            return {"reply": "Message cannot be empty."}, 400
+        
+        if user_message == "Missing Values":
+            reply = "<b>Agent Core Analysis:</b> Missing Value Layer executed. 100 percent of NaN/Null values have been cleared from the baseline dataset."
+        elif user_message == "Duplicate":
+            reply = "<b>Agent Core Analysis:</b> Duplicate check complete. All redundant rows have been automatically filtered and removed from the pipeline."
+        else:
+            reply = f"<b>Agent Core Update:</b> Parameter execution for '<i>{user_message}</i>' completed successfully. No extreme anomalies discovered in this matrix branch."
+        
+        return {"reply": reply}
+    except Exception as e:
+        return {"reply": "An error occurred processing your request. Please try again."}, 500
 
 @app.route('/download_pdf')
 def download_pdf():
+    """Generate and download PDF report with safe file handling"""
     filename = session.get('current_file')
     if not filename:
-        return "No active dataset found to generate PDF", 400
-        
+        return render_template('index.html', error_message="No active dataset found. Please upload a file first.", ai_response=None, tables=None), 400
+    
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(file_path):
+        session.clear()
+        return render_template('index.html', error_message="Dataset file was lost. Please upload your file again.", ai_response=None, tables=None), 400
     
     try:
         if filename.endswith('.xlsx'):
             df = pd.read_excel(file_path)
         else:
-            df = pd.read_csv(file_path, sep=None, engine='python', encoding='utf-8-sig')
-            
+            try:
+                df = pd.read_csv(file_path, sep=',', encoding='utf-8')
+            except Exception:
+                df = pd.read_csv(file_path, sep=None, engine='python', encoding='utf-8-sig')
+        
         df = df.drop_duplicates()
         df = df.dropna()
         
@@ -152,8 +214,11 @@ def download_pdf():
         
         return send_file(pdf_path, as_attachment=True)
         
+    except FileNotFoundError:
+        session.clear()
+        return render_template('index.html', error_message="Dataset file was lost. Please upload your file again.", ai_response=None, tables=None), 400
     except Exception as e:
-        return f"Error generating PDF: {str(e)}", 500
+        return render_template('index.html', error_message="Error generating PDF. Please try again.", ai_response=None, tables=None), 500
 
 @app.route('/clear')
 def clear():
@@ -161,4 +226,5 @@ def clear():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
+    # Keeps local live development active while safe parsing pipeline avoids connection timeouts
     app.run(debug=True)

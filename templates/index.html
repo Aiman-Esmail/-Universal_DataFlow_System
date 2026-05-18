@@ -7,179 +7,546 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .navbar-brand { font-weight: bold; color: #1a365d !important; font-size: 24px; }
-        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 25px; }
-        .card-header { background-color: #fff; border-bottom: 1px solid #edf2f7; font-weight: 600; color: #2b6cb0; padding: 15px 20px; border-radius: 12px 12px 0 0 !important; }
-        .nav-tabs { border-bottom: 2px solid #e2e8f0; }
-        .nav-link { color: #4a5568; font-weight: 500; border: none; padding: 12px 20px; }
-        .nav-link.active { color: #2b6cb0 !important; background: none !important; border-bottom: 3px solid #2b6cb0 !important; font-weight: bold; }
-        .response-box { background-color: #1a202c; color: #edf2f7; border-radius: 8px; padding: 20px; font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 1.6; }
-        .btn-custom { background-color: #2b6cb0; color: white; border-radius: 6px; padding: 10px 24px; font-weight: 500; transition: all 0.2s; }
-        .btn-custom:hover { background-color: #1a365d; color: white; }
+        * {
+            box-sizing: border-box;
+        }
         
-        /* 8 Quick Action Layout Configuration */
-        .chat-btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .quick-analysis-btn { background-color: #e2e8f0; color: #1a202c; border: 1px solid #cbd5e0; border-radius: 8px; padding: 12px 15px; font-size: 14px; font-weight: 600; text-align: center; transition: all 0.2s; cursor: pointer; }
-        .quick-analysis-btn:hover { background-color: #2b6cb0; color: white; border-color: #2b6cb0; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        body { 
+            background: linear-gradient(135deg, #f4f7f6 0%, #e8eef0 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
         
-        /* Conversation Chat Bubbles Design */
-        .chat-bubble-user { background-color: #bee3f8; color: #2c5282; border-radius: 15px 15px 0 15px; padding: 12px 18px; margin-bottom: 15px; max-width: 80%; margin-left: auto; font-weight: 500; text-align: right; }
-        .chat-bubble-ai { background-color: #2d3748; color: #edf2f7; border-radius: 15px 15px 15px 0; padding: 15px 20px; margin-bottom: 15px; max-width: 85%; font-size: 15px; line-height: 1.6; }
+        .navbar-brand { 
+            font-weight: bold; 
+            color: #1a365d !important; 
+            font-size: 24px;
+            letter-spacing: 0.5px;
+        }
+        
+        .card { 
+            border: none; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+            overflow: hidden;
+            transition: box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }
+        
+        .card-header { 
+            background: linear-gradient(135deg, #2b6cb0 0%, #1a365d 100%);
+            border-bottom: none;
+            font-weight: 600; 
+            color: white;
+            padding: 18px 20px; 
+            border-radius: 12px 12px 0 0 !important;
+        }
+        
+        .nav-tabs { 
+            border-bottom: 2px solid #e2e8f0;
+            background-color: #f9fafb;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .nav-link { 
+            color: #4a5568; 
+            font-weight: 500; 
+            border: none; 
+            padding: 12px 20px;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-link:hover {
+            color: #2b6cb0;
+            background-color: #f0f4f8;
+        }
+        
+        .nav-link.active { 
+            color: white !important; 
+            background: linear-gradient(135deg, #2b6cb0 0%, #1a365d 100%) !important;
+            border-bottom: none !important;
+            border-radius: 8px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(43, 108, 176, 0.3);
+        }
+        
+        .response-box { 
+            background-color: #1a202c; 
+            color: #edf2f7; 
+            border-radius: 8px; 
+            padding: 20px; 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 14px; 
+            line-height: 1.6;
+            border-left: 4px solid #2b6cb0;
+        }
+        
+        .btn-custom { 
+            background: linear-gradient(135deg, #2b6cb0 0%, #1a365d 100%);
+            color: white; 
+            border-radius: 6px; 
+            padding: 10px 24px; 
+            font-weight: 500; 
+            transition: all 0.2s;
+            border: none;
+            box-shadow: 0 2px 8px rgba(43, 108, 176, 0.2);
+        }
+        
+        .btn-custom:hover { 
+            background: linear-gradient(135deg, #1a365d 0%, #0f1e35 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .btn-custom:disabled {
+            background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+            color: white;
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+        
+        .chat-btn-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+            gap: 12px; 
+            margin-bottom: 20px;
+        }
+        
+        .quick-analysis-btn { 
+            background-color: #e2e8f0; 
+            color: #1a202c; 
+            border: 1px solid #cbd5e0; 
+            border-radius: 8px; 
+            padding: 12px 15px; 
+            font-size: 13px; 
+            font-weight: 600; 
+            text-align: center; 
+            transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .quick-analysis-btn:hover { 
+            background-color: #2b6cb0; 
+            color: white; 
+            border-color: #2b6cb0; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(43, 108, 176, 0.25);
+        }
+        
+        .quick-analysis-btn:active {
+            transform: translateY(0px);
+        }
+        
+        .chat-bubble-user { 
+            background: linear-gradient(135deg, #bee3f8 0%, #90cdf4 100%);
+            color: #1a365d; 
+            border-radius: 15px 15px 0 15px; 
+            padding: 12px 18px; 
+            margin-bottom: 15px; 
+            max-width: 80%; 
+            margin-left: auto; 
+            font-weight: 500; 
+            text-align: right;
+            word-wrap: break-word;
+        }
+        
+        .chat-bubble-ai { 
+            background-color: #2d3748; 
+            color: #edf2f7; 
+            border-radius: 15px 15px 15px 0; 
+            padding: 15px 20px; 
+            margin-bottom: 15px; 
+            max-width: 85%; 
+            font-size: 14px; 
+            line-height: 1.6;
+            word-wrap: break-word;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        
+        .chat-bubble-ai b {
+            color: #90cdf4;
+        }
+        
+        .alert {
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .alert-success {
+            background-color: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .alert-danger {
+            background-color: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .spinner-border {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-overlay {
+            position: relative;
+        }
+        
+        .table {
+            font-size: 13px;
+        }
+        
+        .table thead {
+            background-color: #2b6cb0;
+            color: white;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #f0f4f8;
+        }
+        
+        .preprocessing-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #edf2f7;
+            transition: padding 0.2s ease;
+        }
+        
+        .preprocessing-item:last-child {
+            border-bottom: none;
+        }
+        
+        .preprocessing-item:hover {
+            padding-left: 10px;
+            background-color: #f9fafb;
+            border-radius: 4px;
+        }
+        
+        .list-group-item {
+            transition: all 0.2s ease;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .list-group-item:hover {
+            background-color: #f0f4f8;
+            border-color: #2b6cb0;
+            transform: translateX(4px);
+        }
+        
+        .badge {
+            font-weight: 600;
+            padding: 0.5rem 0.75rem !important;
+            font-size: 12px;
+        }
+        
+        footer {
+            background-color: white;
+            color: #718096;
+        }
+        
+        .chat-box-container {
+            background-color: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top shadow-sm">
         <div class="container">
             <a class="navbar-brand" href="/"><i class="fa-solid fa-microchip-ai me-2"></i>Universal DataFlow System</a>
+            <div class="ms-auto text-muted small">
+                <i class="fa-solid fa-shield-check me-1"></i>Production Ready
+            </div>
         </div>
     </nav>
 
     <div class="container my-5">
+        <!-- Upload Section -->
         <div class="card">
-            <div class="card-header">Upload Architecture Dataset (CSV Matrix)</div>
+            <div class="card-header">Upload Dataset (CSV or XLSX Matrix)</div>
             <div class="card-body p-4">
-                <form action="/upload" method="POST" enctype="multipart/form-data">
+                <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data" onsubmit="handleFormSubmit(event)">
                     <div class="mb-4">
-                        <input class="form-control" type="file" name="file" accept=".csv" required>
+                        <label for="file-input" class="form-label fw-bold text-secondary">Select Data File</label>
+                        <input class="form-control form-control-lg" id="file-input" type="file" name="file" accept=".csv,.xlsx" required>
+                        <small class="text-muted d-block mt-2"><i class="fa-solid fa-info-circle me-1"></i>Accepted formats: CSV, XLSX. Maximum recommended size: 50 MB</small>
                     </div>
-                    <button type="submit" class="btn btn-custom"><i class="fa-solid fa-gears me-2"></i>Execute Preprocessing Pipeline</button>
+                    <button type="submit" id="submit-btn" class="btn btn-custom btn-lg">
+                        <i class="fa-solid fa-gears me-2"></i>Execute Preprocessing Pipeline
+                    </button>
                 </form>
+                
+                <!-- Success Alert -->
                 {% if message %}
                     <div class="alert alert-success mt-4 d-flex align-items-center" role="alert">
-                        <i class="fa-solid fa-circle-check me-2"></i><div>{{ message }}</div>
+                        <i class="fa-solid fa-circle-check me-3 fs-5"></i>
+                        <div>{{ message }}</div>
+                    </div>
+                {% endif %}
+                
+                <!-- Error Alert -->
+                {% if error_message %}
+                    <div class="alert alert-danger mt-4 d-flex align-items-center" role="alert">
+                        <i class="fa-solid fa-circle-exclamation me-3 fs-5"></i>
+                        <div>{{ error_message }}</div>
                     </div>
                 {% endif %}
             </div>
         </div>
 
+        <!-- Dashboard Section (Only show if data was processed) -->
         {% if ai_response or tables %}
         <div class="card">
             <div class="card-body p-0">
+                <!-- Tab Navigation -->
                 <ul class="nav nav-tabs px-4 pt-3" id="dashboardTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="prep-tab" data-bs-toggle="tab" data-bs-target="#prep" type="button" role="tab" aria-controls="prep" aria-selected="true">Preprocessing</button>
+                        <button class="nav-link active" id="core-analysis-tab" data-bs-toggle="tab" data-bs-target="#core-analysis" type="button" role="tab" aria-controls="core-analysis" aria-selected="true">
+                            <i class="fa-solid fa-brain me-2"></i>AI Core Analysis
+                        </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="viz-tab" data-bs-toggle="tab" data-bs-target="#viz" type="button" role="tab" aria-controls="viz" aria-selected="false">Visualizations</button>
+                        <button class="nav-link" id="dataset-matrix-tab" data-bs-toggle="tab" data-bs-target="#dataset-matrix" type="button" role="tab" aria-controls="dataset-matrix" aria-selected="false">
+                            <i class="fa-solid fa-table me-2"></i>Dataset Matrix
+                        </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-controls="preview" aria-selected="false">Data Preview</button>
+                        <button class="nav-link" id="visualizations-tab" data-bs-toggle="tab" data-bs-target="#visualizations" type="button" role="tab" aria-controls="visualizations" aria-selected="false">
+                            <i class="fa-solid fa-chart-line me-2"></i>Visualizations
+                        </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="download-tab" data-bs-toggle="tab" data-bs-target="#download" type="button" role="tab" aria-controls="download" aria-selected="false">Downloads</button>
+                        <button class="nav-link" id="reporting-hub-tab" data-bs-toggle="tab" data-bs-target="#reporting-hub" type="button" role="tab" aria-controls="reporting-hub" aria-selected="false">
+                            <i class="fa-solid fa-file-export me-2"></i>Reporting Hub
+                        </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat-panel" type="button" role="tab" aria-controls="chat-panel" aria-selected="false"><i class="fa-solid fa-robot me-1"></i>AI Assistant</button>
+                        <button class="nav-link" id="chat-panel-tab" data-bs-toggle="tab" data-bs-target="#chat-panel" type="button" role="tab" aria-controls="chat-panel" aria-selected="false">
+                            <i class="fa-solid fa-robot me-2"></i>AI Assistant
+                        </button>
                     </li>
                 </ul>
 
+                <!-- Tab Content -->
                 <div class="tab-content p-4" id="dashboardTabsContent">
-                    <div class="tab-pane fade show active" id="prep" role="tabpanel" aria-labelledby="prep-tab">
-                        <h5 class="fw-bold mb-3" style="color: #2d3748;">Steps Applied Automatically:</h5>
+                    
+                    <!-- AI Core Analysis Tab -->
+                    <div class="tab-pane fade show active" id="core-analysis" role="tabpanel" aria-labelledby="core-analysis-tab">
+                        <h5 class="fw-bold mb-4" style="color: #2d3748;">
+                            <i class="fa-solid fa-sparkles me-2 text-warning"></i>Automatic Processing Steps
+                        </h5>
+                        
                         <div class="mb-4">
                             {% if preprocessing_log %}
                                 {% for log in preprocessing_log %}
-                                    <div class="d-flex align-items-center mb-2 text-success fw-medium">
-                                        <i class="fa-solid fa-check-double me-2"></i><span>{{ log }}</span>
+                                    <div class="preprocessing-item text-success fw-medium">
+                                        <i class="fa-solid fa-check-double me-3 text-success fs-5"></i>
+                                        <span>{{ log }}</span>
                                     </div>
                                 {% endfor %}
                             {% else %}
-                                <div class="text-muted"><i class="fa-solid fa-info-circle me-2"></i>Standard normalization layers applied.</div>
+                                <div class="text-muted p-3 bg-light rounded">
+                                    <i class="fa-solid fa-info-circle me-2"></i>Standard data normalization layers applied.
+                                </div>
                             {% endif %}
                         </div>
-                        <h5 class="fw-bold mb-3" style="color: #2d3748;">AI Preprocessing Report:</h5>
-                        <div class="response-box text-white">
-                            {{ ai_response | safe }}
+                        
+                        <hr class="my-4">
+                        
+                        <h5 class="fw-bold mb-3" style="color: #2d3748;">
+                            <i class="fa-solid fa-chart-pie me-2 text-info"></i>AI System Report
+                        </h5>
+                        <div class="response-box">
+                            {% if ai_response %}
+                                {{ ai_response | safe }}
+                            {% else %}
+                                <span class="text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Processing analysis...</span>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="viz" role="tabpanel" aria-labelledby="viz-tab">
-                        <h5 class="fw-bold mb-3" style="color: #2d3748;">Statistical Data Visualizations</h5>
-                        <p class="text-muted">Below are the dual pipeline analytic graphs processed from the baseline matrix:</p>
-                        <div class="row g-4 mt-2 justify-content-center">
-                            <div class="col-md-6 text-center">
-                                <div class="p-3 bg-white border rounded-3 shadow-sm">
-                                    <h6 class="fw-bold text-secondary mb-3">Correlation Matrix Heatmap</h6>
-                                    {% if graph_url %}
-                                        <img src="data:image/png;base64,{{ graph_url }}" class="img-fluid rounded shadow-sm" alt="Correlation Matrix Map">
-                                    {% else %}
-                                        <div class="p-4 text-muted bg-light border rounded">Correlation matrix buffer empty.</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6 text-center">
-                                <div class="p-3 bg-white border rounded-3 shadow-sm">
-                                    <h6 class="fw-bold text-secondary mb-3">Target Class Distribution</h6>
-                                    {% if graph_url_2 %}
-                                        <img src="data:image/png;base64,{{ graph_url_2 }}" class="img-fluid rounded shadow-sm" alt="Target Balanced Distribution">
-                                    {% else %}
-                                        <div class="p-4 text-muted bg-light border rounded">Distribution matrix buffer empty.</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="preview" role="tabpanel" aria-labelledby="preview-tab">
-                        <h5 class="fw-bold mb-3" style="color: #2d3748;">Baseline High-Fidelity Preview (Top 10 Records)</h5>
-                        <div class="table-responsive rounded border bg-white">
+                    <!-- Dataset Matrix Tab -->
+                    <div class="tab-pane fade" id="dataset-matrix" role="tabpanel" aria-labelledby="dataset-matrix-tab">
+                        <h5 class="fw-bold mb-4" style="color: #2d3748;">
+                            <i class="fa-solid fa-table me-2 text-primary"></i>High-Fidelity Data Preview (Top 10 Records)
+                        </h5>
+                        
+                        <div class="table-responsive rounded bg-white border">
                             {% if tables %}
                                 {% for table in tables %}
-                                    {{ table | safe }}
+                                    <div class="p-3">
+                                        {{ table | safe }}
+                                    </div>
                                 {% endfor %}
                             {% else %}
-                                <div class="p-4 text-muted text-center">No active record preview loaded.</div>
+                                <div class="p-5 text-center text-muted">
+                                    <i class="fa-solid fa-inbox fs-3 me-2"></i>No active record preview loaded.
+                                </div>
                             {% endif %}
                         </div>
+                        
+                        {% if filename %}
+                            <div class="alert alert-info mt-3 mb-0">
+                                <i class="fa-solid fa-file me-2"></i>
+                                <strong>Active Dataset:</strong> {{ filename }}
+                            </div>
+                        {% endif %}
                     </div>
 
-                    <div class="tab-pane fade" id="download" role="tabpanel" aria-labelledby="download-tab">
-                        <h5 class="fw-bold mb-4" style="color: #2d3748;">Export System Processed Architecture Documents:</h5>
+                    <!-- Visualizations Tab -->
+                    <div class="tab-pane fade" id="visualizations" role="tabpanel" aria-labelledby="visualizations-tab">
+                        <h5 class="fw-bold mb-4" style="color: #2d3748;">
+                            <i class="fa-solid fa-bar-chart me-2 text-success"></i>Statistical Data Visualizations
+                        </h5>
+                        
+                        <p class="text-muted mb-4">Dual-pipeline analytic graphs processed from the baseline matrix:</p>
+                        
+                        <div class="row g-4 justify-content-center">
+                            <div class="col-lg-6">
+                                <div class="p-4 bg-white border rounded-3 shadow-sm text-center">
+                                    <h6 class="fw-bold text-secondary mb-3">
+                                        <i class="fa-solid fa-grip me-2"></i>Correlation Matrix Heatmap
+                                    </h6>
+                                    {% if graph_url %}
+                                        <img src="data:image/png;base64,{{ graph_url }}" class="img-fluid rounded shadow-sm" alt="Correlation Matrix" style="max-height: 300px;">
+                                    {% else %}
+                                        <div class="p-5 text-muted bg-light rounded">
+                                            <i class="fa-solid fa-image fs-4 d-block mb-2"></i>Correlation matrix visualization not available.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-lg-6">
+                                <div class="p-4 bg-white border rounded-3 shadow-sm text-center">
+                                    <h6 class="fw-bold text-secondary mb-3">
+                                        <i class="fa-solid fa-scale-balanced me-2"></i>Target Class Distribution
+                                    </h6>
+                                    {% if graph_url_2 %}
+                                        <img src="data:image/png;base64,{{ graph_url_2 }}" class="img-fluid rounded shadow-sm" alt="Class Distribution" style="max-height: 300px;">
+                                    {% else %}
+                                        <div class="p-5 text-muted bg-light rounded">
+                                            <i class="fa-solid fa-image fs-4 d-block mb-2"></i>Distribution visualization not available.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reporting Hub Tab -->
+                    <div class="tab-pane fade" id="reporting-hub" role="tabpanel" aria-labelledby="reporting-hub-tab">
+                        <h5 class="fw-bold mb-4" style="color: #2d3748;">
+                            <i class="fa-solid fa-file-pdf me-2 text-danger"></i>Export Processed Architecture Documents
+                        </h5>
+                        
                         <div class="list-group shadow-sm">
-                            <a href="/download_csv" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
-                                <div><i class="fa-solid fa-file-csv text-primary me-3 fs-5"></i>Download Cleaned Data Structure</div>
-                                <span class="badge bg-primary rounded-pill px-3 py-2">CSV</span>
-                            </a>
-                            <a href="/download_excel" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
-                                <div><i class="fa-solid fa-file-excel text-success me-3 fs-5"></i>Download Enterprise Business Report</div>
-                                <span class="badge bg-success rounded-pill px-3 py-2">XLSX</span>
-                            </a>
-                            <a href="/download_ml" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
-                                <div><i class="fa-solid fa-brain text-warning me-3 fs-5"></i>Download Downsampled Model Ready Vector</div>
-                                <span class="badge bg-warning text-dark rounded-pill px-3 py-2">ML Ready</span>
-                            </a>
-                            <a href="/download_pdf" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
-                                <div><i class="fa-solid fa-file-pdf text-danger me-3 fs-5"></i>Download Dynamic Executive Analytic Brief</div>
+                            <a href="/download_pdf" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-4">
+                                <div>
+                                    <i class="fa-solid fa-file-pdf text-danger me-3 fs-5"></i>
+                                    <span class="fw-bold">Download Dynamic Executive Analytic Brief</span>
+                                </div>
                                 <span class="badge bg-danger rounded-pill px-3 py-2">PDF</span>
                             </a>
+                            
+                            <a href="/download_csv" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-4" style="{% if not filename %}pointer-events: none; opacity: 0.5;{% endif %}">
+                                <div>
+                                    <i class="fa-solid fa-file-csv text-primary me-3 fs-5"></i>
+                                    <span class="fw-bold">Download Cleaned Data Structure</span>
+                                </div>
+                                <span class="badge bg-primary rounded-pill px-3 py-2">CSV</span>
+                            </a>
+                            
+                            <a href="/download_excel" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-4" style="{% if not filename %}pointer-events: none; opacity: 0.5;{% endif %}">
+                                <div>
+                                    <i class="fa-solid fa-file-excel text-success me-3 fs-5"></i>
+                                    <span class="fw-bold">Download Enterprise Business Report</span>
+                                </div>
+                                <span class="badge bg-success rounded-pill px-3 py-2">XLSX</span>
+                            </a>
+                            
+                            <a href="/download_ml" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-4" style="{% if not filename %}pointer-events: none; opacity: 0.5;{% endif %}">
+                                <div>
+                                    <i class="fa-solid fa-brain text-warning me-3 fs-5"></i>
+                                    <span class="fw-bold">Download Model-Ready Vector Matrix</span>
+                                </div>
+                                <span class="badge bg-warning text-dark rounded-pill px-3 py-2">ML READY</span>
+                            </a>
+                        </div>
+                        
+                        <div class="alert alert-info mt-4">
+                            <i class="fa-solid fa-info-circle me-2"></i>
+                            <strong>Note:</strong> All exported files reflect the cleaned and processed dataset. Files are generated on-demand and stored temporarily.
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="chat-panel" role="tabpanel" aria-labelledby="chat-tab">
-                        <h5 class="fw-bold mb-3" style="color: #2d3748;">Ask anything about your data:</h5>
+                    <!-- AI Assistant Tab -->
+                    <div class="tab-pane fade" id="chat-panel" role="tabpanel" aria-labelledby="chat-panel-tab">
+                        <h5 class="fw-bold mb-4" style="color: #2d3748;">
+                            <i class="fa-solid fa-wand-magic-sparkles me-2 text-primary"></i>Interactive Data Analysis Assistant
+                        </h5>
                         
+                        <p class="text-muted mb-4">Click on any analysis parameter below or ask custom questions about your dataset:</p>
+                        
+                        <!-- Quick Action Buttons Grid (8 buttons) -->
                         <div class="chat-btn-grid">
-                            <div class="quick-analysis-btn" onclick="sendQuickQuery('Columns')"><i class="fa-solid fa-table-columns me-2 text-primary"></i>Columns</div>
-                            <div class="quick-analysis-btn" onclick="sendQuickQuery('Average')"><i class="fa-solid fa-calculator me-2 text-success"></i>Average</div>
-                            <div class="quick-analysis-btn" onclick="sendQuickQuery('Missing Values')"><i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>Missing Values</div>
-                            <div class="quick-analysis-btn" onclick="sendQuickQuery('Imbalance')"><i class="fa-solid fa-scale-unbalanced me-2 text-warning"></i>Imbalance</div>
-                            <div class="quick-analysis-btn" onclick="sendQuickQuery('Correlation')"><i class="fa-solid fa-circle-nodes me-2 text-info"></i>Correlation</div>
-                            <div class="quick-analysis-btn" onclick="sendQuickQuery('Duplicate')"><i class="fa-solid fa-clone me-2 text-secondary"></i>Duplicate</div>
-                            <div class="quick-analysis-btn" onclick="sendQuickQuery('Summary')"><i class="fa-solid fa-file-lines me-2 text-dark"></i>Summary</div>
-                            <div class="quick-analysis-btn" onclick="sendQuickQuery('Max and Min')"><i class="fa-solid fa-arrows-up-down me-2 text-primary"></i>Max and Min</div>
+                            <button class="quick-analysis-btn" onclick="sendQuickQuery('Missing Values')" type="button" title="Analyze missing value patterns">
+                                <i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>Missing Values
+                            </button>
+                            <button class="quick-analysis-btn" onclick="sendQuickQuery('Duplicate')" type="button" title="Check for duplicate records">
+                                <i class="fa-solid fa-clone me-2 text-secondary"></i>Duplicate
+                            </button>
+                            <button class="quick-analysis-btn" onclick="sendQuickQuery('Columns')" type="button" title="List dataset columns">
+                                <i class="fa-solid fa-table-columns me-2 text-primary"></i>Columns
+                            </button>
+                            <button class="quick-analysis-btn" onclick="sendQuickQuery('Imbalance')" type="button" title="Detect class imbalance">
+                                <i class="fa-solid fa-scale-unbalanced me-2 text-warning"></i>Imbalance
+                            </button>
+                            <button class="quick-analysis-btn" onclick="sendQuickQuery('Correlation')" type="button" title="Show correlations">
+                                <i class="fa-solid fa-circle-nodes me-2 text-info"></i>Correlation
+                            </button>
+                            <button class="quick-analysis-btn" onclick="sendQuickQuery('Average')" type="button" title="Calculate averages">
+                                <i class="fa-solid fa-calculator me-2 text-success"></i>Average
+                            </button>
+                            <button class="quick-analysis-btn" onclick="sendQuickQuery('Summary')" type="button" title="Get dataset summary">
+                                <i class="fa-solid fa-file-lines me-2 text-dark"></i>Summary
+                            </button>
+                            <button class="quick-analysis-btn" onclick="sendQuickQuery('Max and Min')" type="button" title="Find extremes">
+                                <i class="fa-solid fa-arrows-up-down me-2 text-primary"></i>Max and Min
+                            </button>
                         </div>
 
-                        <div class="p-3 border rounded bg-white shadow-sm mb-3" style="height: 350px; overflow-y: auto;" id="chat-box-container">
+                        <!-- Chat Display Container -->
+                        <div class="chat-box-container p-3" style="height: 400px; overflow-y: auto;" id="chat-box-container">
                             <div id="chat-output">
-                                <div class="chat-bubble-ai">System initialization complete. Click on any analysis parameter above or write your prompt below to interact with the model...</div>
+                                <div class="chat-bubble-ai">
+                                    <i class="fa-solid fa-robot me-2"></i><b>System Ready.</b> Click on any analysis option above or ask a custom question below to interact with the AI model.
+                                </div>
                             </div>
                         </div>
 
-                        <div class="input-group">
-                            <input type="text" id="user-manual-input" class="form-control" placeholder="Ask your data agent manually...">
-                            <button class="btn btn-custom" type="button" onclick="handleManualSend()"><i class="fa-solid fa-paper-plane"></i> Send</button>
+                        <!-- Manual Input -->
+                        <div class="input-group mt-3">
+                            <input type="text" id="user-manual-input" class="form-control form-control-lg" placeholder="Ask your data agent a custom question..." onkeypress="if(event.key==='Enter') handleManualSend()">
+                            <button class="btn btn-custom" type="button" id="send-btn" onclick="handleManualSend()">
+                                <i class="fa-solid fa-paper-plane me-2"></i>Send
+                            </button>
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearChat()" title="Clear conversation">
+                                <i class="fa-solid fa-trash-can me-2"></i>Clear
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -188,25 +555,52 @@
         {% endif %}
     </div>
 
-    <footer class="text-center py-4 text-muted bg-white border-top mt-5">
-        <small>Universal DataFlow System &copy; 2026 &mdash; Powered by AI and Flask</small>
+    <!-- Footer -->
+    <footer class="text-center py-5 text-muted mt-5">
+        <small>
+            <i class="fa-solid fa-copyright me-1"></i>Universal DataFlow System 2026 
+            &mdash; Powered by Flask, Pandas, and AI Intelligence
+        </small>
     </footer>
 
+    <!-- Bootstrap & Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Main Application JavaScript -->
     <script>
-        // Synchronize Bootstrap Tab behaviors and triggers explicitly
-        document.addEventListener("DOMContentLoaded", function() {
-            var triggerElList = [].slice.call(document.querySelectorAll('#dashboardTabs button'))
-            triggerElList.forEach(function (triggerEl) {
-                var tabTrigger = new bootstrap.Tab(triggerEl)
-                triggerEl.addEventListener('click', function (event) {
-                    event.preventDefault()
-                    tabTrigger.show()
-                })
-            })
-        });
+        // ==========================================
+        // Form Submission Guard (Prevent OOM on Render)
+        // ==========================================
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const form = document.getElementById('upload-form');
+            const submitBtn = document.getElementById('submit-btn');
+            const fileInput = document.getElementById('file-input');
+            
+            // Validate file selection
+            if (!fileInput.value) {
+                alert('Please select a file before uploading.');
+                return;
+            }
+            
+            // Disable button to prevent double-submission
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <i class="fa-solid fa-spinner fa-spin me-2"></i>Processing Large Matrix Assets...
+            `;
+            
+            // Submit the form after visual feedback
+            setTimeout(() => {
+                form.submit();
+            }, 300);
+        }
 
+        // ==========================================
+        // AI Chat System - AJAX Handler
+        // ==========================================
         function sendQuickQuery(parameter) {
+            if (!parameter || parameter.trim() === '') return;
             appendUserBubble(parameter);
             fetchAIResponse(parameter);
         }
@@ -214,43 +608,133 @@
         function handleManualSend() {
             const inputField = document.getElementById('user-manual-input');
             const query = inputField.value.trim();
-            if(!query) return;
+            
+            if (!query) {
+                alert('Please enter a question before sending.');
+                return;
+            }
+            
             appendUserBubble(query);
             inputField.value = '';
+            inputField.focus();
             fetchAIResponse(query);
         }
 
         function appendUserBubble(text) {
             const outputDiv = document.getElementById('chat-output');
-            outputDiv.innerHTML += `<div class="chat-bubble-user">${text}</div>`;
-            scrollToBottom();
+            const sanitizedText = escapeHtml(text);
+            outputDiv.innerHTML += `<div class="chat-bubble-user">${sanitizedText}</div>`;
+            scrollChatToBottom();
         }
 
         function fetchAIResponse(messageText) {
             const outputDiv = document.getElementById('chat-output');
             const loadingId = 'loading-' + Date.now();
-            outputDiv.innerHTML += `<div class="chat-bubble-ai" id="${loadingId}"><i class="fa-solid fa-spinner fa-spin me-2 text-info"></i>AI Processing request...</div>`;
-            scrollToBottom();
+            
+            // Add loading indicator
+            outputDiv.innerHTML += `
+                <div class="chat-bubble-ai" id="${loadingId}">
+                    <i class="fa-solid fa-spinner fa-spin me-2 text-info"></i>AI Processing request...
+                </div>
+            `;
+            scrollChatToBottom();
 
+            // POST request to /chat endpoint
             fetch('/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify({ message: messageText })
             })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
             .then(data => {
-                document.getElementById(loadingId).innerHTML = data.reply;
-                scrollToBottom();
+                if (!data || !data.reply) {
+                    throw new Error('Invalid response format from server');
+                }
+                
+                // Update loading bubble with response
+                const loadingElement = document.getElementById(loadingId);
+                if (loadingElement) {
+                    loadingElement.innerHTML = data.reply; // Safe HTML from backend
+                }
+                scrollChatToBottom();
             })
             .catch(err => {
-                document.getElementById(loadingId).innerHTML = '<span class="text-danger"><i class="fa-solid fa-circle-exclamation me-2"></i>Error linking to active system model matrix.</span>';
+                console.error('Chat error:', err);
+                const loadingElement = document.getElementById(loadingId);
+                if (loadingElement) {
+                    loadingElement.innerHTML = `
+                        <span class="text-danger">
+                            <i class="fa-solid fa-circle-exclamation me-2"></i>
+                            Error connecting to system model matrix. Please try again.
+                        </span>
+                    `;
+                }
             });
         }
 
-        function scrollToBottom() {
+        function scrollChatToBottom() {
             const container = document.getElementById('chat-box-container');
-            container.scrollTop = container.scrollHeight;
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
         }
+
+        function clearChat() {
+            const chatOutput = document.getElementById('chat-output');
+            if (chatOutput) {
+                chatOutput.innerHTML = `
+                    <div class="chat-bubble-ai">
+                        <i class="fa-solid fa-broom me-2"></i><b>Conversation cleared.</b> Ready for new analysis session.
+                    </div>
+                `;
+                scrollChatToBottom();
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ==========================================
+        // Initialization
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Bootstrap tabs
+            const tabElements = document.querySelectorAll('#dashboardTabs button');
+            tabElements.forEach(element => {
+                const tab = new bootstrap.Tab(element);
+                element.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    tab.show();
+                });
+            });
+            
+            // Focus on file input for accessibility
+            const fileInput = document.getElementById('file-input');
+            if (fileInput) {
+                fileInput.addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        console.log('File selected:', this.files[0].name);
+                    }
+                });
+            }
+        });
+
+        // Prevent tab key navigation in chat to maintain focus
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && document.activeElement === document.getElementById('user-manual-input')) {
+                e.preventDefault();
+                handleManualSend();
+            }
+        });
     </script>
 </body>
 </html>
